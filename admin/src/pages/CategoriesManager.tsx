@@ -135,7 +135,7 @@ export const CategoriesManager: React.FC = () => {
     setNameAr('');
     setNameBn('');
     setParentId('root');
-    setOrder(categories.length);
+    setOrder(categories.filter((cat) => !cat.parentId).length);
     setIsActive(true);
     setErrorMessage(null);
     setIsModalOpen(true);
@@ -447,7 +447,15 @@ export const CategoriesManager: React.FC = () => {
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">প্যারেন্ট বিভাগ (ঐচ্ছিক)</label>
                   <select
                     value={parentId}
-                    onChange={(e) => setParentId(e.target.value)}
+                    onChange={(e) => {
+                      const nextParentId = e.target.value;
+                      setParentId(nextParentId);
+                      const siblings = categories.filter((cat) =>
+                        cat.id !== editingCategory?.id &&
+                        (cat.parentId || 'root') === nextParentId
+                      );
+                      setOrder(siblings.length);
+                    }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white"
                   >
                     <option value="root">মূল বিভাগ (Top Level)</option>
