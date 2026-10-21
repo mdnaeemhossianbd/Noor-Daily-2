@@ -1,0 +1,94 @@
+package com.example.util
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.util.Log
+import com.example.receiver.PrayerAlarmReceiver
+
+object PrayerAlarmScheduler {
+
+  private const val TAG = "PrayerAlarmScheduler"
+  const val REQUEST_CODE_PRAYER_ALARM = 9001
+
+  fun scheduleNextPrayerAlarm(context: Context) {
+    try {
+      val prefs = context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE)
+      val enabled = prefs.getBoolean("azan_notifications_enabled", true)
+      if (!enabled) {
+        cancelAlarms(context)
+        return
+      }
+
+      val isHanafi = prefs.getBoolean("is_hanafi_madhhab", true)
+      val location = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+      val nextTarget = PrayerTimeCalculator.getNextPrayerAlarmTarget(
+        latitude = location.latitude,
+        longitude = location.longitude,
+        isHanafi = isHanafi
+      )
+
+      val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+      if (alarmManager == null) {
+        Log.w(TAG, "AlarmManager not available")
+        return
+      }
+
+      val intent = Intent(context, PrayerAlarmReceiver::class.java).apply {
+        action = PrayerAlarmReceiver.ACTION_PRAYER_ALARM
+        putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_NAME, nextTarget.nameBn)
+      }
+
+      val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        REQUEST_CODE_PRAYER_ALARM,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+      )
+
+      val triggerAtMillis = nextTarget.triggerTimeMillis
+      Log.d(TAG, "Scheduling next Azan alarm for ${nextTarget.nameBn} at $triggerAtMillis")
+
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        // Can use setExactAndAllowWhileIdle for reliable wake up in Doze mode
+        try {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (alarmManager.canScheduleExactAlarms()) {
+              alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            } else {
+              alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            }
+          } else {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+          }
+        } catch (_: SecurityException) {
+          alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+        }
+      } else {
+        alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+      }
+    } catch (e: Exception) {
+      Log.e(TAG, "Error scheduling prayer alarm", e)
+    }
+  }
+
+  fun cancelAlarms(context: Context) {
+    try {
+      val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+      val intent = Intent(context, PrayerAlarmReceiver::class.java).apply {
+        action = PrayerAlarmReceiver.ACTION_PRAYER_ALARM
+      }
+      val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        REQUEST_CODE_PRAYER_ALARM,
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+      )
+      alarmManager.cancel(pendingIntent)
+    } catch (e: Exception) {
+      Log.e(TAG, "Error canceling alarms", e)
+    }
+  }
+}

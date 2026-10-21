@@ -1,0 +1,28 @@
+{
+  "rules": {
+    "posts": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)"
+    },
+    "categories": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)"
+    },
+    "quizzes": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)"
+    },
+    "calendar_events": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)"
+    },
+    "app_config": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)"
+    },
+    "audit_logs": {
+      ".read": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)",
+      ".write": "auth != null"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-emerald-primary: #0A5C36;
+  --color-gold-accent: #D4AF37;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}

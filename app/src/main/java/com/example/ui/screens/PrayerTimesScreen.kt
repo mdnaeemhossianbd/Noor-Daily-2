@@ -1,0 +1,472 @@
+package com.example.ui.screens
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.media.Ringtone
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.example.model.CityLocation
+import com.example.ui.theme.*
+import com.example.util.LocationAndNotificationHelper
+import com.example.util.PrayerTimeCalculator
+import kotlinx.coroutines.delay
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PrayerTimesScreen(
+  currentLang: String,
+  selectedCity: CityLocation,
+  isHanafi: Boolean,
+  onCitySelected: (CityLocation) -> Unit,
+  onMadhhabToggled: (Boolean) -> Unit,
+) {
+  val context = LocalContext.current
+
+  // User location state
+  var userLocationInfo by remember {
+    mutableStateOf(LocationAndNotificationHelper.getCurrentDeviceLocation(context))
+  }
+
+  // Location Permission Launcher
+  val locationPermissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestMultiplePermissions()
+  ) { permissions ->
+    val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+      permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    if (granted) {
+      userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+    }
+  }
+
+  // Notification Permission Launcher
+  val notificationPermissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission()
+  ) {}
+
+  // Azan Alert State
+  var isAzanPlaying by remember { mutableStateOf(false) }
+  var azanSecondsLeft by remember { mutableIntStateOf(20) }
+  var currentMediaPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
+
+  LaunchedEffect(isAzanPlaying) {
+    if (isAzanPlaying) {
+      currentMediaPlayer = LocationAndNotificationHelper.triggerAzanAlert(
+        context = context,
+        prayerName = when (currentLang) { "bn" -> "নামাজ"; "ar" -> "الصلاة"; else -> "Prayer" },
+        durationSeconds = 20
+      )
+      azanSecondsLeft = 20
+      while (azanSecondsLeft > 0) {
+        delay(1000)
+        azanSecondsLeft--
+      }
+      LocationAndNotificationHelper.stopAzan(context)
+      currentMediaPlayer = null
+      isAzanPlaying = false
+    } else {
+      LocationAndNotificationHelper.stopAzan(context)
+      currentMediaPlayer = null
+    }
+  }
+
+  // Live Astronomical Calculation
+  var prayerCalculation by remember(userLocationInfo, isHanafi) {
+    mutableStateOf(
+      PrayerTimeCalculator.calculate(
+        latitude = userLocationInfo.latitude,
+        longitude = userLocationInfo.longitude,
+        isHanafi = isHanafi
+      )
+    )
+  }
+
+  // Countdown seconds ticker
+  var secondsRemaining by remember(prayerCalculation) {
+    mutableLongStateOf(prayerCalculation.remainingSecondsToNext)
+  }
+
+  LaunchedEffect(prayerCalculation) {
+    secondsRemaining = prayerCalculation.remainingSecondsToNext
+    while (true) {
+      delay(1000)
+      if (secondsRemaining > 0) {
+        secondsRemaining--
+      } else {
+        isAzanPlaying = true
+        prayerCalculation = PrayerTimeCalculator.calculate(
+          latitude = userLocationInfo.latitude,
+          longitude = userLocationInfo.longitude,
+          isHanafi = isHanafi
+        )
+      }
+    }
+  }
+
+  val hours = secondsRemaining / 3600
+  val minutes = (secondsRemaining % 3600) / 60
+  val seconds = secondsRemaining % 60
+  val countdownFormatted = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+  val prayersList = listOf(
+    Triple("Fajr", when (currentLang) { "bn" -> "ফজর"; "ar" -> "الفجر"; else -> "Fajr" }, prayerCalculation.fajr),
+    Triple("Sunrise", when (currentLang) { "bn" -> "সূর্যোদয়"; "ar" -> "الشروق"; else -> "Sunrise" }, prayerCalculation.sunrise),
+    Triple("Dhuhr", when (currentLang) { "bn" -> "যোহর"; "ar" -> "الظهر"; else -> "Dhuhr" }, prayerCalculation.dhuhr),
+    Triple("Asr", when (currentLang) { "bn" -> "আসর"; "ar" -> "العصر"; else -> "Asr" }, prayerCalculation.asr),
+    Triple("Maghrib", when (currentLang) { "bn" -> "মাগরিব"; "ar" -> "المغرب"; else -> "Maghrib" }, prayerCalculation.maghrib),
+    Triple("Isha", when (currentLang) { "bn" -> "এশা"; "ar" -> "العشاء"; else -> "Isha" }, prayerCalculation.isha),
+  )
+
+  val activePrayer = prayerCalculation.activePrayerNameEn
+
+  LazyColumn(
+    modifier = Modifier
+      .fillMaxSize()
+      .padding(horizontal = 16.dp),
+    verticalArrangement = Arrangement.spacedBy(14.dp),
+    contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
+  ) {
+
+    // Header & Azan Action
+    item {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Column {
+          Text(
+            text = when (currentLang) {
+              "bn" -> "নামাজের সময়সূচি"
+              "ar" -> "مواقيت الصلاة"
+              else -> "Prayer Times"
+            },
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+          )
+          Text(
+            text = when (currentLang) {
+              "bn" -> "সঠিক সময় ও আযানের অনুস্মারক"
+              "ar" -> "مواقيت دقيقة ومنبه الأذان"
+              else -> "Accurate Astronomical Schedule"
+            },
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+          )
+        }
+
+        FilledTonalButton(
+          onClick = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+              notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            isAzanPlaying = true
+          },
+          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+          Icon(Icons.Default.VolumeUp, contentDescription = null, modifier = Modifier.size(16.dp))
+          Spacer(modifier = Modifier.width(4.dp))
+          Text("আযান টেস্ট", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        }
+      }
+    }
+
+    // 20-Second Azan Alert Banner
+    item {
+      AnimatedVisibility(
+        visible = isAzanPlaying,
+        enter = fadeIn(),
+        exit = fadeOut()
+      ) {
+        Card(
+          shape = RoundedCornerShape(16.dp),
+          colors = CardDefaults.cardColors(containerColor = IslamicEmeraldPrimary),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Box(
+              modifier = Modifier
+                .size(42.dp)
+                .background(IslamicGoldAccent, CircleShape),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Default.VolumeUp, contentDescription = null, tint = Color.Black)
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                text = "নামাজের ওয়াক্ত হয়েছে • আযান বাজছে",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp
+              )
+              Text(
+                text = "আর $azanSecondsLeft সেকেন্ড বাকি (সাউন্ড ও ভাইব্রেশন চলছে)",
+                color = IslamicGoldLight,
+                fontSize = 12.sp
+              )
+            }
+            IconButton(onClick = { isAzanPlaying = false }) {
+              Icon(Icons.Default.Close, contentDescription = "Stop", tint = Color.White)
+            }
+          }
+        }
+      }
+    }
+
+    // Location Info Card (Real User Location)
+    item {
+      Surface(
+        onClick = {
+          val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+          if (!hasPermission) {
+            locationPermissionLauncher.launch(
+              arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
+          } else {
+            userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+          }
+        },
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Row(
+          modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(8.dp))
+            Column {
+              Text(
+                text = userLocationInfo.addressName,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+              )
+              Text(
+                text = when (currentLang) {
+                  "bn" -> "ডিভাইসের অবস্থান অনুযায়ী সময় সমন্বিত"
+                  "ar" -> "مزامنة مع موقع الجهاز"
+                  else -> "Synchronized with device location"
+                },
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+          }
+          Icon(
+            Icons.Default.Refresh,
+            contentDescription = "Refresh",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+          )
+        }
+      }
+    }
+
+    // Hero: Next Prayer Countdown Card
+    item {
+      Card(
+        modifier = Modifier
+          .fillMaxWidth()
+          .clip(RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+      ) {
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .background(
+              Brush.linearGradient(
+                colors = listOf(
+                  Color(0xFF074328),
+                  Color(0xFF032213)
+                )
+              )
+            )
+            .padding(22.dp)
+        ) {
+          Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(
+              text = when (currentLang) {
+                "bn" -> "পরবর্তী নামাজ: ${prayerCalculation.nextPrayerNameBn}"
+                "ar" -> "الصلاة القادمة: ${prayerCalculation.nextPrayerNameAr}"
+                else -> "Next Prayer: ${prayerCalculation.nextPrayerNameEn}"
+              },
+              color = IslamicGoldLight,
+              fontSize = 16.sp,
+              fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+              text = countdownFormatted,
+              color = Color.White,
+              fontSize = 38.sp,
+              fontWeight = FontWeight.Bold,
+              letterSpacing = 2.sp
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+              text = when (currentLang) {
+                "bn" -> "বর্তমান ওয়াক্ত: ${prayerCalculation.activePrayerNameBn}"
+                "ar" -> "الوقت الحالي: ${prayerCalculation.activePrayerNameAr}"
+                else -> "Current Active: ${prayerCalculation.activePrayerNameEn}"
+              },
+              color = Color(0xFFC7E2D3),
+              fontSize = 12.sp
+            )
+          }
+        }
+      }
+    }
+
+    // Madhhab Indicator (Hanafi Calculation)
+    item {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text(
+          text = when (currentLang) {
+            "bn" -> "মাযহাব (আসর নামাজের ওয়াক্ত)"
+            "ar" -> "المذهب الفقهي (صلاة العصر)"
+            else -> "Calculation Method (Asr)"
+          },
+          fontSize = 13.sp,
+          fontWeight = FontWeight.SemiBold
+        )
+
+        Surface(
+          shape = RoundedCornerShape(8.dp),
+          color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+          border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+        ) {
+          Text(
+            text = when (currentLang) {
+              "bn" -> "হানাফী"
+              "ar" -> "حنفي"
+              else -> "Hanafi"
+            },
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+          )
+        }
+      }
+    }
+
+    // 6 Daily Prayer Rows
+    items(prayersList.size) { index ->
+      val (code, name, time) = prayersList[index]
+      val isActive = code.equals(activePrayer, ignoreCase = true)
+
+      Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (isActive) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface,
+        border = if (isActive) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Row(
+          modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+              modifier = Modifier
+                .size(34.dp)
+                .background(
+                  if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                  CircleShape
+                ),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(
+                when (code) {
+                  "Fajr" -> Icons.Default.WbTwilight
+                  "Sunrise" -> Icons.Default.WbSunny
+                  "Dhuhr" -> Icons.Default.WbSunny
+                  "Asr" -> Icons.Default.Brightness5
+                  "Maghrib" -> Icons.Default.NightsStay
+                  else -> Icons.Default.NightlightRound
+                },
+                contentDescription = null,
+                tint = if (isActive) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp)
+              )
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+              Text(
+                text = name,
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
+                fontSize = 15.sp,
+                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+              )
+              if (isActive) {
+                Text(
+                  text = when (currentLang) {
+                    "bn" -> "চলমান ওয়াক্ত"
+                    "ar" -> "الوقت الحالي"
+                    else -> "Active Now"
+                  },
+                  fontSize = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.primary
+                )
+              }
+            }
+          }
+
+          Text(
+            text = time,
+            fontSize = 16.sp,
+            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+          )
+        }
+      }
+    }
+  }
+}

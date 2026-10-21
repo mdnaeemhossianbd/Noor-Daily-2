@@ -1,0 +1,11 @@
+
+android/app/google-services.json
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub/
+build/
+.idea/
+android-backup/
+*.backup

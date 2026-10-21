@@ -1,0 +1,24 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/privacy-policy",
+      "destination": "/privacy-policy.html"
+    },
+    {
+      "source": "/privacy-policy/",
+      "destination": "/privacy-policy.html"
+    },
+    {
+      "source": "/privacy-policy.html",
+      "destination": "/privacy-policy.html"
+    },
+    {
+      "source": "/((?!assets/|privacy-policy|favicon|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

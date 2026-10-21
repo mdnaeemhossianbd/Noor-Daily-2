@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow full read/write for all content collections so admin panel and mobile app always sync smoothly
+    match /categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    match /posts/{postId} {
+      allow read, write: if true;
+    }
+
+    match /quizzes/{quizId} {
+      allow read, write: if true;
+    }
+
+    match /calendar_events/{eventId} {
+      allow read, write: if true;
+    }
+
+    match /app_config/{configId} {
+      allow read, write: if true;
+    }
+
+    match /audit_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Default match for any subcollections
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

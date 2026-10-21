@@ -1,0 +1,206 @@
+
+import 'dart:async';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../models/category_model.dart';
+import '../models/post_model.dart';
+
+class ContentProvider extends ChangeNotifier {
+  static const String _databaseUrl =
+      'https://gen-lang-client-0048418625-default-rtdb.asia-southeast1.firebasedatabase.app';
+
+  late final FirebaseDatabase _database;
+
+  List<CategoryModel> _categories = [];
+  List<PostModel> _posts = [];
+  List<String> _bookmarkedPostIds = [];
+
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  StreamSubscription<DatabaseEvent>? _postsSubscription;
+  StreamSubscription<DatabaseEvent>? _categoriesSubscription;
+
+  List<CategoryModel> get categories => _categories;
+  List<PostModel> get posts => _posts;
+  List<String> get bookmarkedPostIds => _bookmarkedPostIds;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  ContentProvider() {
+    _database = FirebaseDatabase.instanceFor(
+      app: Firebase.app(),
+      databaseURL: _databaseUrl,
+    );
+
+    _loadBookmarks();
+    initSubscriptions();
+  }
+
+  Map<String, dynamic> _toStringMap(Object? value) {
+    if (value is Map) {
+      return value.map(
+        (key, value) => MapEntry(key.toString(), value),
+      );
+    }
+    return <String, dynamic>{};
+  }
+
+  void initSubscriptions() {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    _categoriesSubscription?.cancel();
+    _postsSubscription?.cancel();
+
+    _categoriesSubscription = _database
+        .ref('categories')
+        .onValue
+        .listen(
+      (event) {
+        final raw = event.snapshot.value;
+        final result = <CategoryModel>[];
+
+        if (raw is Map) {
+          raw.forEach((key, value) {
+            if (value is Map) {
+              final data = _toStringMap(value);
+              final category = CategoryModel.fromRealtimeDatabase(
+                key.toString(),
+                data,
+              );
+
+              if (category.isActive) {
+                result.add(category);
+              }
+            }
+          });
+        }
+
+        result.sort((a, b) {
+          final depthComparison = a.depth.compareTo(b.depth);
+          return depthComparison != 0
+              ? depthComparison
+              : a.order.compareTo(b.order);
+        });
+
+        _categories = result;
+        notifyListeners();
+      },
+      onError: (Object error) {
+        debugPrint('Realtime Database categories error: $error');
+        _errorMessage = 'Could not load categories.';
+        notifyListeners();
+      },
+    );
+
+    _postsSubscription = _database
+        .ref('posts')
+        .onValue
+        .listen(
+      (event) {
+        final raw = event.snapshot.value;
+        final result = <PostModel>[];
+
+        if (raw is Map) {
+          raw.forEach((key, value) {
+            if (value is Map) {
+              final data = _toStringMap(value);
+              final post = PostModel.fromRealtimeDatabase(
+                (data['id'] ?? key).toString(),
+                data,
+              );
+              final status = post.status.trim().toLowerCase();
+              if (status == 'published' || status == 'publish' || status == 'public') {
+                result.add(post);
+              }
+            }
+          });
+        } else if (raw is List) {
+          for (var index = 0; index < raw.length; index++) {
+            final value = raw[index];
+            if (value is Map) {
+              final data = _toStringMap(value);
+              final post = PostModel.fromRealtimeDatabase(
+                (data['id'] ?? 'post_$index').toString(),
+                data,
+              );
+              final status = post.status.trim().toLowerCase();
+              if (status == 'published' || status == 'publish' || status == 'public') {
+                result.add(post);
+              }
+            }
+          }
+        }
+        debugPrint('Noor Daily: received ${result.length} published posts from Firebase.');
+
+        result.sort((a, b) {
+          final timeA = a.createdAt ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          final timeB = b.createdAt ??
+              DateTime.fromMillisecondsSinceEpoch(0);
+          return timeB.compareTo(timeA);
+        });
+
+        _posts = result;
+        _isLoading = false;
+        _errorMessage = null;
+        notifyListeners();
+      },
+      onError: (Object error) {
+        debugPrint('Realtime Database posts error: $error');
+        _isLoading = false;
+        _errorMessage =
+            'Could not load content. Please check internet connection.';
+        notifyListeners();
+      },
+    );
+  }
+
+  Future<void> _loadBookmarks() async {
+    final prefs = await SharedPreferences.getInstance();
+    _bookmarkedPostIds = prefs.getStringList('saved_post_ids') ?? [];
+    notifyListeners();
+  }
+
+  Future<void> toggleBookmark(String postId) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (_bookmarkedPostIds.contains(postId)) {
+      _bookmarkedPostIds.remove(postId);
+    } else {
+      _bookmarkedPostIds.add(postId);
+    }
+
+    await prefs.setStringList(
+      'saved_post_ids',
+      _bookmarkedPostIds,
+    );
+    notifyListeners();
+  }
+
+  bool isBookmarked(String postId) =>
+      _bookmarkedPostIds.contains(postId);
+
+  List<PostModel> get savedPosts => _posts
+      .where((post) => _bookmarkedPostIds.contains(post.id))
+      .toList();
+
+  List<PostModel> getPostsByCategory(String categoryId) =>
+      _posts.where((post) => post.categoryId == categoryId).toList();
+
+  PostModel? get dailyAyatPost =>
+      _posts.isEmpty ? null : _posts.first;
+
+  @override
+  void dispose() {
+    _postsSubscription?.cancel();
+    _categoriesSubscription?.cancel();
+    super.dispose();
+  }
+}

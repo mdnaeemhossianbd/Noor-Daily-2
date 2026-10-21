@@ -1,0 +1,49 @@
+name: Build Noor Daily Android APK
+
+on:
+  workflow_dispatch: # Allows one-tap manual trigger directly from mobile browser
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/**'
+
+jobs:
+  build:
+    name: Compile Android Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Verify Flutter Installation
+        run: flutter doctor -v
+
+      - name: Install Mobile Dependencies
+        working-directory: ./mobile
+        run: flutter pub get
+
+      - name: Build Universal Release APK
+        working-directory: ./mobile
+        run: flutter build apk --release
+
+      - name: Upload APK as Downloadable Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: noor-daily-release-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14
