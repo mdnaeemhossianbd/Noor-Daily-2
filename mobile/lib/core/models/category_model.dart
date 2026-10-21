@@ -1,4 +1,3 @@
-
 class CategoryModel {
   final String id;
   final String nameAr;
@@ -43,12 +42,19 @@ class CategoryModel {
     String id,
     Map<String, dynamic> data,
   ) {
+    final rawParentId = data['parentId']?.toString().trim();
+    final normalizedParentId = rawParentId == null ||
+            rawParentId.isEmpty ||
+            rawParentId.toLowerCase() == 'null'
+        ? null
+        : rawParentId;
+
     return CategoryModel(
       id: id,
       nameAr: (data['name_ar'] ?? '').toString(),
       nameBn: (data['name_bn'] ?? '').toString(),
       nameEn: (data['name_en'] ?? '').toString(),
-      parentId: data['parentId']?.toString(),
+      parentId: normalizedParentId,
       depth: (data['depth'] as num?)?.toInt() ?? 0,
       order: (data['order'] as num?)?.toInt() ?? 0,
       isActive: data['isActive'] as bool? ?? true,
