@@ -11,6 +11,8 @@ class PostModel {
   final String bodyBn;
   final String bodyEn;
   final String categoryId;
+  final String mainCategory;
+  final String subCategory;
   final String? imageUrl;
   final String status;
   final DateTime? createdAt;
@@ -28,6 +30,8 @@ class PostModel {
     required this.bodyBn,
     required this.bodyEn,
     required this.categoryId,
+    this.mainCategory = '',
+    this.subCategory = '',
     this.imageUrl,
     required this.status,
     this.createdAt,
@@ -70,6 +74,8 @@ class PostModel {
       ),
       bodyEn: _str(data['body_en'] ?? data['bodyEn']),
       categoryId: _str(data['categoryId'] ?? data['category_id'] ?? data['category']),
+      mainCategory: _str(data['mainCategory'] ?? data['main_category']),
+      subCategory: _str(data['subCategory'] ?? data['sub_category']),
       imageUrl: data['imageUrl']?.toString(),
       status: _str(data['status']).trim().isEmpty
           ? 'published'
