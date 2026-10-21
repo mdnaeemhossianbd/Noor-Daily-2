@@ -15,7 +15,7 @@ class CategoriesScreen extends StatefulWidget {
 }
 
 class _CategoriesScreenState extends State<CategoriesScreen> {
-  String? _selectedCategoryId;
+  final List<CategoryModel> _navigationStack = [];
 
   @override
   Widget build(BuildContext context) {
@@ -23,123 +23,111 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final localeProvider = context.watch<LocaleProvider>();
     final contentProvider = context.watch<ContentProvider>();
     final langCode = localeProvider.locale.languageCode;
-
     final categories = contentProvider.categories;
-    final selectedCategory = categories.firstWhere(
-      (c) => c.id == _selectedCategoryId,
-      orElse: () => categories.isNotEmpty ? categories.first : CategoryModel(
-        id: '',
-        nameAr: '',
-        nameBn: '',
-        nameEn: '',
-        depth: 0,
-        order: 0,
-        isActive: true,
-      ),
-    );
+    final currentCategory =
+        _navigationStack.isEmpty ? null : _navigationStack.last;
 
-    final posts = _selectedCategoryId != null && _selectedCategoryId!.isNotEmpty
-        ? contentProvider.getPostsByCategory(_selectedCategoryId!)
-        : contentProvider.posts;
+    // Only show the children of the current category. At the root, show main
+    // categories only. Posts are shown only when the selected category is a leaf.
+    final visibleCategories = categories
+        .where((category) => category.parentId == currentCategory?.id)
+        .toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    final hasChildCategories = visibleCategories.isNotEmpty;
+    final posts = currentCategory == null || hasChildCategories
+        ? const []
+        : contentProvider.getPostsByCategory(currentCategory.id);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.translate('categories_title')),
-      ),
-      body: categories.isEmpty
-          ? Center(
-              child: Text(
-                l10n.translate('no_posts_found'),
-                style: const TextStyle(color: Colors.grey),
+        leading: _navigationStack.isEmpty
+            ? null
+            : IconButton(
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _navigationStack.removeLast()),
               ),
-            )
-          : Column(
-              children: [
-                // Vertical category tree: each parent is followed by its children.
-                SizedBox(
-                  height: 220,
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: ChoiceChip(
-                          label: Text(l10n.translate('all_categories')),
-                          selected: _selectedCategoryId == null,
-                          onSelected: (val) {
-                            setState(() => _selectedCategoryId = null);
-                          },
-                          selectedColor: IslamicTheme.primaryEmerald.withValues(alpha: 0.15),
-                          labelStyle: TextStyle(
-                            color: _selectedCategoryId == null
-                                ? IslamicTheme.primaryEmerald
-                                : null,
-                            fontWeight: _selectedCategoryId == null
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                      ...categories.map((cat) {
-                        final isSelected = _selectedCategoryId == cat.id;
-                        return Padding(
-                          padding: EdgeInsets.only(
-                            left: cat.depth * 20.0,
-                            bottom: 4,
-                          ),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: ChoiceChip(
-                              avatar: Icon(
-                                cat.depth == 0 ? Icons.folder_outlined : Icons.subdirectory_arrow_right,
-                                size: 16,
+        title: Text(
+          currentCategory?.localizedName(langCode) ??
+              l10n.translate('categories_title'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      body: contentProvider.isLoading && categories.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : categories.isEmpty
+              ? _emptyState(l10n.translate('no_posts_found'))
+              : hasChildCategories
+                  ? ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: visibleCategories.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final category = visibleCategories[index];
+                        final childCount = categories
+                            .where((item) => item.parentId == category.id)
+                            .length;
+                        return Card(
+                          clipBehavior: Clip.antiAlias,
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            leading: Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: IslamicTheme.primaryEmerald
+                                    .withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              label: Text(cat.localizedName(langCode)),
-                              selected: isSelected,
-                              onSelected: (val) {
-                                setState(() => _selectedCategoryId = val ? cat.id : null);
-                              },
-                              selectedColor: IslamicTheme.primaryEmerald.withValues(alpha: 0.15),
-                              labelStyle: TextStyle(
-                                color: isSelected ? IslamicTheme.primaryEmerald : null,
-                                fontWeight: cat.depth == 0 || isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
+                              child: Icon(
+                                category.depth == 0
+                                    ? Icons.folder_outlined
+                                    : Icons.folder_open_outlined,
+                                color: IslamicTheme.primaryEmerald,
                               ),
+                            ),
+                            title: Text(
+                              category.localizedName(langCode),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            subtitle: Text(
+                              childCount > 0
+                                  ? 'বিভাগ খুলতে চাপ দিন'
+                                  : 'পোস্ট দেখতে চাপ দিন',
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => setState(
+                              () => _navigationStack.add(category),
                             ),
                           ),
                         );
-                      }),
-                    ],
-                  ),
-                ),
-                const Divider(height: 16),
-
-                // Post list in category
-                Expanded(
-                  child: posts.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24.0),
-                            child: Text(
-                              l10n.translate('no_posts_found'),
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
+                      },
+                    )
+                  : posts.isEmpty
+                      ? _emptyState(l10n.translate('no_posts_found'))
+                      : ListView.separated(
                           padding: const EdgeInsets.all(16),
                           itemCount: posts.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final post = posts[index];
                             return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.all(14),
                                 title: Text(
                                   post.localizedTitle(langCode),
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                  textDirection: langCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textDirection: langCode == 'ar'
+                                      ? TextDirection.rtl
+                                      : TextDirection.ltr,
                                 ),
                                 subtitle: Padding(
                                   padding: const EdgeInsets.only(top: 6),
@@ -149,22 +137,31 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => PostDetailScreen(post: post),
-                                    ),
-                                  );
-                                },
+                                trailing:
+                                    const Icon(Icons.arrow_forward_ios, size: 14),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PostDetailScreen(post: post),
+                                  ),
+                                ),
                               ),
                             );
                           },
                         ),
-                ),
-              ],
-            ),
+    );
+  }
+
+  Widget _emptyState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.grey),
+        ),
+      ),
     );
   }
 }

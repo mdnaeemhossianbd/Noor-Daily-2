@@ -77,6 +77,7 @@ export const PostsManager: React.FC = () => {
   const [author, setAuthor] = useState('');
   const [hadithReference, setHadithReference] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [status, setStatus] = useState<PostStatus>('published');
 
@@ -86,46 +87,11 @@ export const PostsManager: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCustomSubCategory, setIsCustomSubCategory] = useState(false);
 
-  // Dynamic Sub-Categories List for selected Category (Dropdown Scroll View)
-  const availableSubCategories = useMemo(() => {
-    const list: string[] = [];
-
-    // 1. Child categories defined in categories table under this category
-    categories
-      .filter(c => c.parentId === categoryId)
-      .forEach(c => {
-        const name = (c.name_bn || c.name_en || '').trim();
-        if (name && !list.includes(name)) list.push(name);
-      });
-
-    // 2. Previously used subcategories in posts under this category
-    posts
-      .filter(p => p.categoryId === categoryId || p.mainCategory === mainCategory)
-      .forEach(p => {
-        const sub = (p.subCategory || '').trim();
-        if (sub && !list.includes(sub)) list.push(sub);
-      });
-
-    // 3. Recommended Islamic subcategories matching category topic
-    const catName = ((categories.find(c => c.id === categoryId)?.name_bn || mainCategory) || '').toLowerCase();
-    if (catName.includes('কুরআন') || categoryId.includes('quran')) {
-      ['সূরা আল-বাকারা', 'আয়াতুল কুরসি', 'তাফসির ও ব্যাখ্যা', 'তাজবীদ ও তিলাওয়াত', 'কুরআনের হেদায়েত', 'সূরা আল-ফাতিহা', 'সূরা ইয়াসিন'].forEach(s => !list.includes(s) && list.push(s));
-    } else if (catName.includes('নামাজ') || categoryId.includes('namaz')) {
-      ['ফরজ নামাজ', 'সুন্নত ও নফল', 'তাহাজ্জুদ ও সালাতুল লাইল', 'নামাজের নিয়ম ও মাসায়েল', 'পবিত্রতা ও ওজু', 'নামাজের দোয়া ও তাসবীহ'].forEach(s => !list.includes(s) && list.push(s));
-    } else if (catName.includes('হাদিস') || categoryId.includes('hadith')) {
-      ['সহীহ বুখারী', 'সহীহ মুসলিম', 'রিয়াদুস সালেহীন', 'দৈনন্দিন হাদিস', '৪০ হাদিস', 'সুনান আন-নাসায়ী'].forEach(s => !list.includes(s) && list.push(s));
-    } else if (catName.includes('দোয়া') || catName.includes('জিকির') || categoryId.includes('dua')) {
-      ['সকাল-সন্ধ্যার জিকির', 'দৈনন্দিন দোয়া', 'বিপদ ও পেরেশানির দোয়া', 'ইস্তিগফার ও তওবা', 'দোয়া কবুলের আমল', 'ঘুমানোর ও জাগ্রত হওয়ার দোয়া'].forEach(s => !list.includes(s) && list.push(s));
-    } else if (catName.includes('রোজা') || catName.includes('রমজান') || categoryId.includes('roza')) {
-      ['রোজার ফজিলত ও নিয়ম', 'সাহরি ও ইফতার', 'তারাবীহ ও ইতিকাফ', 'লাইলাতুল কদর', 'রোজার কাফফারা'].forEach(s => !list.includes(s) && list.push(s));
-    } else if (catName.includes('যাকাত') || categoryId.includes('zakat')) {
-      ['যাকাতের নিসাব ও হিসাব', 'সদাকাতুল ফিতর', 'দান-সদকার ফজিলত', 'যাকাত বণ্টনের খাত'].forEach(s => !list.includes(s) && list.push(s));
-    } else if (catName.includes('ক্যালেন্ডার') || catName.includes('দিবস') || categoryId.includes('calendar')) {
-      ['রমজান মাস', 'মুহাররম ও আশুরা', 'জিলহজ্জ ও ঈদুল আজহা', 'শাবান ও শবে বরাত', 'রবিউল আউয়াল ও সিরাত'].forEach(s => !list.includes(s) && list.push(s));
-    }
-
-    return list;
-  }, [categories, categoryId, mainCategory, posts]);
+  // Only categories directly below the selected main category can receive posts.
+  const availableSubCategories = useMemo(
+    () => categories.filter(c => c.parentId === categoryId && c.isActive !== false),
+    [categories, categoryId]
+  );
 
   useEffect(() => {
     // 1. Subscribe to Categories
@@ -206,7 +172,9 @@ export const PostsManager: React.FC = () => {
     setIsCustomSubCategory(false);
     setAuthor('');
     setHadithReference('');
-    setCategoryId(categories[0]?.id || 'cat_quran');
+    const firstMain = categories.find(c => !c.parentId);
+    setCategoryId(firstMain?.id || '');
+    setSelectedSubCategoryId(categories.find(c => c.parentId === firstMain?.id)?.id || '');
     setImageUrl('');
     setStatus('published');
     setSelectedFile(null);
@@ -227,7 +195,11 @@ export const PostsManager: React.FC = () => {
     setIsCustomSubCategory(false);
     setAuthor(post.author || '');
     setHadithReference(post.hadithReference || '');
-    setCategoryId(post.categoryId || categories[0]?.id || '');
+    const savedCategory = categories.find(c => c.id === post.categoryId);
+    const savedParent = savedCategory?.parentId ? categories.find(c => c.id === savedCategory.parentId) : undefined;
+    const mainId = savedParent?.id || post.categoryId || categories.find(c => !c.parentId)?.id || '';
+    setCategoryId(mainId);
+    setSelectedSubCategoryId(savedParent ? (savedCategory?.id || '') : (categories.find(c => c.parentId === mainId)?.id || ''));
     setImageUrl(post.imageUrl || '');
     setStatus(post.status);
     setSelectedFile(null);
@@ -309,13 +281,13 @@ export const PostsManager: React.FC = () => {
         mainArabic: mainArabic.trim() || '',
         banglaTranslation: banglaTranslation.trim() || '',
         banglaPronunciation: banglaPronunciation.trim() || '',
-        mainCategory: mainCategory.trim() || (categories.find(c => c.id === categoryId)?.name_bn || 'কুরআন ও হাদিস'),
-        subCategory: subCategory.trim() || '',
+        mainCategory: (categories.find(c => c.id === categoryId)?.name_bn || mainCategory || 'ইসলামিক').trim(),
+        subCategory: (categories.find(c => c.id === selectedSubCategoryId)?.name_bn || subCategory || '').trim(),
         author: author.trim() || '',
         hadithReference: hadithReference.trim() || '',
         body_bn: banglaTranslation.trim() || subtitleBn.trim() || titleBn.trim(),
         body_en: banglaTranslation.trim() || autoEnSubtitle,
-        categoryId: categoryId || categories[0]?.id || 'cat_quran',
+        categoryId: selectedSubCategoryId || categoryId || categories[0]?.id || '',
         imageUrl: finalImageUrl || '',
         status: status || 'published',
         createdAt: editingPost?.createdAt || Date.now(),
@@ -721,13 +693,17 @@ export const PostsManager: React.FC = () => {
                   <select
                     value={categoryId}
                     onChange={(e) => {
-                      setCategoryId(e.target.value);
-                      const cat = categories.find(c => c.id === e.target.value);
+                      const nextMainId = e.target.value;
+                      setCategoryId(nextMainId);
+                      const cat = categories.find(c => c.id === nextMainId);
                       if (cat) setMainCategory(cat.name_bn || cat.name_en);
+                      const firstChild = categories.find(c => c.parentId === nextMainId && c.isActive !== false);
+                      setSelectedSubCategoryId(firstChild?.id || '');
+                      setSubCategory(firstChild?.name_bn || firstChild?.name_en || '');
                     }}
                     className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
                   >
-                    {categories.map((c) => (
+                    {categories.filter(c => !c.parentId && c.isActive !== false).map((c) => (
                       <option key={c.id} value={c.id}>{c.name_bn || c.name_en}</option>
                     ))}
                   </select>
@@ -745,36 +721,24 @@ export const PostsManager: React.FC = () => {
                       {isCustomSubCategory ? 'তালিকা থেকে পছন্দ করুন' : '+ নতুন লিখুন'}
                     </button>
                   </div>
-                  {isCustomSubCategory ? (
-                    <input
-                      type="text"
-                      value={subCategory}
-                      onChange={(e) => setSubCategory(e.target.value)}
-                      placeholder="যেমন: ঈমান ও তাওহীদ"
-                      className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  ) : (
-                    <select
-                      value={subCategory}
-                      onChange={(e) => {
-                        if (e.target.value === '__custom__') {
-                          setIsCustomSubCategory(true);
-                          setSubCategory('');
-                        } else {
-                          setSubCategory(e.target.value);
-                        }
-                      }}
-                      className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                    >
-                      <option value="">-- কোনো উপ-বিভাগ নেই (ঐচ্ছিক) --</option>
-                      {subCategory && !availableSubCategories.includes(subCategory) && (
-                        <option value={subCategory}>{subCategory} (বর্তমান)</option>
-                      )}
-                      {availableSubCategories.map((sub, idx) => (
-                        <option key={idx} value={sub}>{sub}</option>
-                      ))}
-                      <option value="__custom__">+ অন্য নতুন উপ-বিভাগ লিখুন...</option>
-                    </select>
+                  <select
+                    value={selectedSubCategoryId}
+                    required={availableSubCategories.length > 0}
+                    onChange={(e) => {
+                      const nextId = e.target.value;
+                      setSelectedSubCategoryId(nextId);
+                      const child = categories.find(c => c.id === nextId);
+                      setSubCategory(child?.name_bn || child?.name_en || '');
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                  >
+                    <option value="">-- সাব-ক্যাটাগরি নির্বাচন করুন --</option>
+                    {availableSubCategories.map((sub) => (
+                      <option key={sub.id} value={sub.id}>{sub.name_bn || sub.name_en}</option>
+                    ))}
+                  </select>
+                  {availableSubCategories.length === 0 && (
+                    <p className="mt-1 text-xs text-amber-300">এই Main Category-র অধীনে আগে Categories Manager থেকে Subcategory তৈরি করুন।</p>
                   )}
                 </div>
               </div>
