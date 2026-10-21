@@ -235,8 +235,38 @@ class ContentProvider extends ChangeNotifier {
       .where((post) => _bookmarkedPostIds.contains(post.id))
       .toList();
 
-  List<PostModel> getPostsByCategory(String categoryId) =>
-      _posts.where((post) => post.categoryId == categoryId).toList();
+  List<PostModel> getPostsByCategory(String categoryId) {
+    final selected = _categories.where((category) => category.id == categoryId);
+    if (selected.isEmpty) {
+      return _posts.where((post) => post.categoryId == categoryId).toList();
+    }
+
+    final category = selected.first;
+    final parent = _categories.where((item) => item.id == category.parentId);
+    final parentCategory = parent.isEmpty ? null : parent.first;
+    final categoryNames = <String>{
+      category.nameBn.trim().toLowerCase(),
+      category.nameEn.trim().toLowerCase(),
+      category.nameAr.trim().toLowerCase(),
+    }..removeWhere((name) => name.isEmpty);
+    final parentNames = <String>{
+      if (parentCategory != null) parentCategory.nameBn.trim().toLowerCase(),
+      if (parentCategory != null) parentCategory.nameEn.trim().toLowerCase(),
+      if (parentCategory != null) parentCategory.nameAr.trim().toLowerCase(),
+    }..removeWhere((name) => name.isEmpty);
+
+    return _posts.where((post) {
+      if (post.categoryId == categoryId) return true;
+
+      // Backward compatibility: older admin posts save the main category ID
+      // and the selected subcategory as a text field instead of a category ID.
+      final subName = post.subCategory.trim().toLowerCase();
+      final mainName = post.mainCategory.trim().toLowerCase();
+      final belongsToParent = parentCategory != null &&
+          (post.categoryId == parentCategory.id || parentNames.contains(mainName));
+      return categoryNames.contains(subName) && belongsToParent;
+    }).toList();
+  }
 
   PostModel? get dailyAyatPost =>
       _posts.isEmpty ? null : _posts.first;
