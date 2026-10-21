@@ -24,6 +24,49 @@ import {
 import { defaultCategories } from '../data/seedData';
 import { getInitialCategories, logAudit } from '../api/firestoreService';
 
+ 
+// Keep each category directly below its parent, then sort siblings by display order.
+const sortCategoriesHierarchically = (items: Category[]): Category[] => {
+  const byId = new Map<string, Category>();
+  items.forEach((item) => {
+    if (item.id) byId.set(item.id, item);
+  });
+
+  const compare = (a: Category, b: Category) =>
+    (Number(a.order) || 0) - (Number(b.order) || 0) ||
+    (a.name_bn || a.name_en || '').localeCompare(b.name_bn || b.name_en || '') ||
+    (a.id || '').localeCompare(b.id || '');
+
+  const childrenByParent = new Map<string, Category[]>();
+  const roots: Category[] = [];
+  items.forEach((item) => {
+    if (!item.parentId || !byId.has(item.parentId)) {
+      roots.push(item);
+    } else {
+      const siblings = childrenByParent.get(item.parentId) || [];
+      siblings.push(item);
+      childrenByParent.set(item.parentId, siblings);
+    }
+  });
+
+  roots.sort(compare);
+  childrenByParent.forEach((siblings) => siblings.sort(compare));
+
+  const result: Category[] = [];
+  const visited = new Set<string>();
+  const visit = (item: Category) => {
+    if (!item.id || visited.has(item.id)) return;
+    visited.add(item.id);
+    result.push(item);
+    (childrenByParent.get(item.id) || []).forEach(visit);
+  };
+
+  roots.forEach(visit);
+  // Preserve malformed/orphaned records safely instead of hiding them.
+  [...items].sort(compare).forEach(visit);
+  return result;
+};
+
 export const CategoriesManager: React.FC = () => {
   const { currentUser } = useAuth();
   const [categories, setCategories] = useState<Category[]>(getInitialCategories());
@@ -49,8 +92,7 @@ export const CategoriesManager: React.FC = () => {
     const unsub = onValue(catsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const list: Category[] = Object.values(data);
-        list.sort((a, b) => a.depth - b.depth || a.order - b.order);
+        const list = sortCategoriesHierarchically(Object.values(data) as Category[]);
         setCategories(list);
         localStorage.setItem('noor_categories', JSON.stringify(list));
       }
@@ -71,8 +113,9 @@ export const CategoriesManager: React.FC = () => {
         catMap[catId] = { ...cat, id: catId, updatedAt: Date.now() };
       }
       await set(ref(db, 'categories'), catMap);
-      setCategories(Object.values(catMap));
-      localStorage.setItem('noor_categories', JSON.stringify(Object.values(catMap)));
+      const sortedCategories = sortCategoriesHierarchically(Object.values(catMap));
+      setCategories(sortedCategories);
+      localStorage.setItem('noor_categories', JSON.stringify(sortedCategories));
 
       if (manual) {
         setSyncToast('সকল ইসলামিক ক্যাটাগরি ফায়ারবেস ক্লাউডে সফলভাবে সিঙ্ক হয়েছে!');
@@ -92,7 +135,7 @@ export const CategoriesManager: React.FC = () => {
     setNameAr('');
     setNameBn('');
     setParentId('root');
-    setOrder(categories.length);
+    setOrder(categories.filter((cat) => !cat.parentId).length);
     setIsActive(true);
     setErrorMessage(null);
     setIsModalOpen(true);
@@ -140,11 +183,12 @@ export const CategoriesManager: React.FC = () => {
       // 1. Instantly update local state & localStorage
       setCategories(prev => {
         const exists = prev.some(c => c.id === catId);
-        const updated = exists 
+        const updated = exists
           ? prev.map(c => c.id === catId ? payload : c)
           : [...prev, payload];
-        localStorage.setItem('noor_categories', JSON.stringify(updated));
-        return updated;
+        const sorted = sortCategoriesHierarchically(updated);
+        localStorage.setItem('noor_categories', JSON.stringify(sorted));
+        return sorted;
       });
 
       setIsModalOpen(false);
@@ -188,7 +232,7 @@ export const CategoriesManager: React.FC = () => {
       await remove(ref(db, `categories/${categoryId}`));
 
       setCategories(prev => {
-        const filtered = prev.filter(c => c.id !== categoryId);
+        const filtered = sortCategoriesHierarchically(prev.filter(c => c.id !== categoryId));
         localStorage.setItem('noor_categories', JSON.stringify(filtered));
         return filtered;
       });
@@ -207,7 +251,7 @@ export const CategoriesManager: React.FC = () => {
       await set(ref(db, `categories/${cat.id}/updatedAt`), Date.now());
 
       setCategories(prev => {
-        const updated = prev.map(c => c.id === cat.id ? { ...c, isActive: updatedStatus } : c);
+        const updated = sortCategoriesHierarchically(prev.map(c => c.id === cat.id ? { ...c, isActive: updatedStatus } : c));
         localStorage.setItem('noor_categories', JSON.stringify(updated));
         return updated;
       });
@@ -403,7 +447,15 @@ export const CategoriesManager: React.FC = () => {
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">প্যারেন্ট বিভাগ (ঐচ্ছিক)</label>
                   <select
                     value={parentId}
-                    onChange={(e) => setParentId(e.target.value)}
+                    onChange={(e) => {
+                      const nextParentId = e.target.value;
+                      setParentId(nextParentId);
+                      const siblings = categories.filter((cat) =>
+                        cat.id !== editingCategory?.id &&
+                        (cat.parentId || 'root') === nextParentId
+                      );
+                      setOrder(siblings.length);
+                    }}
                     className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white"
                   >
                     <option value="root">মূল বিভাগ (Top Level)</option>

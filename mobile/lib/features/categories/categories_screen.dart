@@ -55,15 +55,14 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             )
           : Column(
               children: [
-                // Horizontal category selector chips
+                // Vertical category tree: each parent is followed by its children.
                 SizedBox(
-                  height: 48,
+                  height: 220,
                   child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
                         child: ChoiceChip(
                           label: Text(l10n.translate('all_categories')),
                           selected: _selectedCategoryId == null,
@@ -84,19 +83,29 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       ...categories.map((cat) {
                         final isSelected = _selectedCategoryId == cat.id;
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(
-                              '${'— ' * cat.depth}${cat.localizedName(langCode)}',
-                            ),
-                            selected: isSelected,
-                            onSelected: (val) {
-                              setState(() => _selectedCategoryId = val ? cat.id : null);
-                            },
-                            selectedColor: IslamicTheme.primaryEmerald.withValues(alpha: 0.15),
-                            labelStyle: TextStyle(
-                              color: isSelected ? IslamicTheme.primaryEmerald : null,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          padding: EdgeInsets.only(
+                            left: cat.depth * 20.0,
+                            bottom: 4,
+                          ),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: ChoiceChip(
+                              avatar: Icon(
+                                cat.depth == 0 ? Icons.folder_outlined : Icons.subdirectory_arrow_right,
+                                size: 16,
+                              ),
+                              label: Text(cat.localizedName(langCode)),
+                              selected: isSelected,
+                              onSelected: (val) {
+                                setState(() => _selectedCategoryId = val ? cat.id : null);
+                              },
+                              selectedColor: IslamicTheme.primaryEmerald.withValues(alpha: 0.15),
+                              labelStyle: TextStyle(
+                                color: isSelected ? IslamicTheme.primaryEmerald : null,
+                                fontWeight: cat.depth == 0 || isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
                             ),
                           ),
                         );

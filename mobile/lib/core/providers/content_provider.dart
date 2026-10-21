@@ -50,6 +50,57 @@ class ContentProvider extends ChangeNotifier {
     return <String, dynamic>{};
   }
 
+  List<CategoryModel> _sortCategoriesHierarchically(
+    List<CategoryModel> items,
+  ) {
+    final byId = <String, CategoryModel>{
+      for (final item in items) item.id: item,
+    };
+    int compare(CategoryModel a, CategoryModel b) {
+      final orderComparison = a.order.compareTo(b.order);
+      if (orderComparison != 0) return orderComparison;
+      final nameComparison = a.nameBn.compareTo(b.nameBn);
+      if (nameComparison != 0) return nameComparison;
+      return a.id.compareTo(b.id);
+    }
+
+    final roots = <CategoryModel>[];
+    final childrenByParent = <String, List<CategoryModel>>{};
+    for (final item in items) {
+      final parentId = item.parentId;
+      if (parentId == null || !byId.containsKey(parentId)) {
+        roots.add(item);
+      } else {
+        (childrenByParent[parentId] ??= <CategoryModel>[]).add(item);
+      }
+    }
+
+    roots.sort(compare);
+    for (final siblings in childrenByParent.values) {
+      siblings.sort(compare);
+    }
+
+    final result = <CategoryModel>[];
+    final visited = <String>{};
+    void visit(CategoryModel item) {
+      if (!visited.add(item.id)) return;
+      result.add(item);
+      for (final child in childrenByParent[item.id] ?? const <CategoryModel>[]) {
+        visit(child);
+      }
+    }
+
+    for (final root in roots) {
+      visit(root);
+    }
+    // Keep orphaned or malformed records visible rather than silently dropping them.
+    final remaining = List<CategoryModel>.from(items)..sort(compare);
+    for (final item in remaining) {
+      visit(item);
+    }
+    return result;
+  }
+
   void initSubscriptions() {
     _isLoading = true;
     _errorMessage = null;
@@ -82,14 +133,7 @@ class ContentProvider extends ChangeNotifier {
           });
         }
 
-        result.sort((a, b) {
-          final depthComparison = a.depth.compareTo(b.depth);
-          return depthComparison != 0
-              ? depthComparison
-              : a.order.compareTo(b.order);
-        });
-
-        _categories = result;
+        _categories = _sortCategoriesHierarchically(result);
         notifyListeners();
       },
       onError: (Object error) {
