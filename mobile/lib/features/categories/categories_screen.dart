@@ -7,15 +7,12 @@ import '../../core/models/category_model.dart';
 import '../../core/theme/islamic_theme.dart';
 import '../posts/post_detail_screen.dart';
 
-class CategoriesScreen extends StatefulWidget {
-  const CategoriesScreen({super.key});
+/// Displays one level of the category tree per screen.
+/// Main categories never share a list with their subcategories.
+class CategoriesScreen extends StatelessWidget {
+  const CategoriesScreen({super.key, this.parentCategory});
 
-  @override
-  State<CategoriesScreen> createState() => _CategoriesScreenState();
-}
-
-class _CategoriesScreenState extends State<CategoriesScreen> {
-  final List<CategoryModel> _navigationStack = [];
+  final CategoryModel? parentCategory;
 
   @override
   Widget build(BuildContext context) {
@@ -24,31 +21,31 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     final contentProvider = context.watch<ContentProvider>();
     final langCode = localeProvider.locale.languageCode;
     final categories = contentProvider.categories;
-    final currentCategory =
-        _navigationStack.isEmpty ? null : _navigationStack.last;
 
-    // Only show the children of the current category. At the root, show main
-    // categories only. Posts are shown only when the selected category is a leaf.
-    final visibleCategories = categories
-        .where((category) => category.parentId == currentCategory?.id)
-        .toList()
+    final visibleCategories = categories.where((category) {
+      if (parentCategory == null) {
+        final parentId = category.parentId?.trim();
+        return parentId == null || parentId.isEmpty || parentId == 'null';
+      }
+      return category.parentId == parentCategory!.id;
+    }).toList()
       ..sort((a, b) => a.order.compareTo(b.order));
-    final hasChildCategories = visibleCategories.isNotEmpty;
-    final posts = currentCategory == null || hasChildCategories
+
+    final posts = parentCategory == null || visibleCategories.isNotEmpty
         ? const []
-        : contentProvider.getPostsByCategory(currentCategory.id);
+        : contentProvider.getPostsByCategory(parentCategory!.id);
 
     return Scaffold(
       appBar: AppBar(
-        leading: _navigationStack.isEmpty
+        leading: parentCategory == null
             ? null
             : IconButton(
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                 icon: const Icon(Icons.arrow_back),
-                onPressed: () => setState(() => _navigationStack.removeLast()),
+                onPressed: () => Navigator.of(context).pop(),
               ),
         title: Text(
-          currentCategory?.localizedName(langCode) ??
+          parentCategory?.localizedName(langCode) ??
               l10n.translate('categories_title'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
@@ -58,7 +55,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
           ? const Center(child: CircularProgressIndicator())
           : categories.isEmpty
               ? _emptyState(l10n.translate('no_posts_found'))
-              : hasChildCategories
+              : visibleCategories.isNotEmpty
                   ? ListView.separated(
                       padding: const EdgeInsets.all(16),
                       itemCount: visibleCategories.length,
@@ -84,7 +81,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                category.depth == 0
+                                childCount == 0
                                     ? Icons.folder_outlined
                                     : Icons.folder_open_outlined,
                                 color: IslamicTheme.primaryEmerald,
@@ -98,12 +95,16 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                             ),
                             subtitle: Text(
                               childCount > 0
-                                  ? 'বিভাগ খুলতে চাপ দিন'
+                                  ? 'সাব-ক্যাটাগরি দেখতে চাপ দিন'
                                   : 'পোস্ট দেখতে চাপ দিন',
                             ),
                             trailing: const Icon(Icons.chevron_right),
-                            onTap: () => setState(
-                              () => _navigationStack.add(category),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => CategoriesScreen(
+                                  parentCategory: category,
+                                ),
+                              ),
                             ),
                           ),
                         );
@@ -137,8 +138,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                trailing:
-                                    const Icon(Icons.arrow_forward_ios, size: 14),
+                                trailing: const Icon(
+                                  Icons.arrow_forward_ios,
+                                  size: 14,
+                                ),
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
