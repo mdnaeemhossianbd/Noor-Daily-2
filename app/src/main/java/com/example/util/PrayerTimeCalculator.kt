@@ -267,10 +267,12 @@ object PrayerTimeCalculator {
     latitude: Double,
     longitude: Double,
     isHanafi: Boolean = true,
-    enabledPrayers: Set<String> = setOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
+    enabledPrayers: Set<String> = setOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"),
+    timeZoneId: String? = null
   ): PrayerAlarmTarget {
     require(enabledPrayers.isNotEmpty()) { "At least one prayer reminder must be enabled" }
-    val now = Calendar.getInstance()
+    val now = if (timeZoneId.isNullOrBlank()) Calendar.getInstance()
+      else Calendar.getInstance(TimeZone.getTimeZone(timeZoneId))
     val todayTimes = calculate(latitude, longitude, isHanafi, now)
 
     fun prayerTargets(times: CalculatedPrayerTimes) = listOf(
