@@ -419,7 +419,7 @@ object LocationAndNotificationHelper {
     }
     if (nearestSaudi != null) {
       val distance = calculateDistanceKm(lat, lon, nearestSaudi.third.first, nearestSaudi.third.second)
-      if (distance <= 100.0) {
+      if (distance <= 40.0) {
         val cityName = if (isBn) when (nearestSaudi.second) {
           "Taif" -> "তায়েফ"
           "Makkah" -> "মক্কা"
