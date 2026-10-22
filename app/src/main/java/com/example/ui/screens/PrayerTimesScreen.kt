@@ -61,7 +61,6 @@ fun PrayerTimesScreen(
     java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(currentSelectedCity.timeZoneId))
   }
   val (gregFormatted, hijriFormatted) = IslamicDateHelper.getFormattedDates(currentLang, dateCalendar)
-  val englishIntlDate = IslamicDateHelper.getEnglishIntlDate(dateCalendar)
   val banglaSolarDate = IslamicDateHelper.getBanglaSolarDate(dateCalendar)
 
   var userLocationInfo by remember {
@@ -544,46 +543,6 @@ fun PrayerTimesScreen(
           }
 
           Spacer(modifier = Modifier.height(6.dp))
-
-          // 3. হিজরির নিচে: আন্তর্জাতিক ইংরেজি ক্যালেন্ডার (International English Calendar Bar)
-          Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f),
-            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)),
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-              horizontalArrangement = Arrangement.SpaceBetween,
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                  Icons.Default.Event,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.tertiary,
-                  modifier = Modifier.size(15.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                  text = when (currentLang) {
-                    "bn" -> "আন্তর্জাতিক ইংরেজি:"
-                    "ar" -> "التاريخ الدولي:"
-                    else -> "International (Intl):"
-                  },
-                  fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.tertiary
-                )
-              }
-              Text(
-                text = englishIntlDate,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-              )
-            }
-          }
 
           if (currentLang == "bn") {
             Spacer(modifier = Modifier.height(6.dp))
