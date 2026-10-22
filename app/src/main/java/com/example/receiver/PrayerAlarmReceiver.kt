@@ -14,6 +14,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
     const val ACTION_PRAYER_ALARM = "com.example.ACTION_PRAYER_ALARM"
     const val ACTION_STOP_AZAN = "com.example.ACTION_STOP_AZAN"
     const val EXTRA_PRAYER_NAME = "extra_prayer_name"
+    const val EXTRA_PRAYER_KEY = "extra_prayer_key"
   }
 
   override fun onReceive(context: Context, intent: Intent) {
@@ -30,11 +31,13 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
 
       ACTION_PRAYER_ALARM -> {
         val prayerName = intent.getStringExtra(EXTRA_PRAYER_NAME) ?: "নামাজ"
+        val prayerKey = intent.getStringExtra(EXTRA_PRAYER_KEY)?.lowercase()
 
-        // Check if Azan alerts are enabled
+        // Re-check both master and individual switches at fire time to avoid stale alarms.
         val prefs = context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE)
         val isAzanEnabled = prefs.getBoolean("azan_notifications_enabled", true)
-        if (!isAzanEnabled) {
+        val isPrayerEnabled = prayerKey == null || prefs.getBoolean("azan_${prayerKey}_enabled", true)
+        if (!isAzanEnabled || !isPrayerEnabled) {
           // Even if sound disabled, schedule next
           PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
           return
