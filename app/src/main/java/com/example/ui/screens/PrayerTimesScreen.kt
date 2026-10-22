@@ -668,7 +668,11 @@ fun PrayerTimesScreen(
               color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
             ) {
               Text(
-                text = "বাকি: $sehriRemainingFormatted",
+                text = when (currentLang) {
+                  "bn" -> "বাকি: $sehriRemainingFormatted"
+                  "ar" -> "متبقي: $sehriRemainingFormatted"
+                  else -> "Remaining: $sehriRemainingFormatted"
+                },
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -709,7 +713,11 @@ fun PrayerTimesScreen(
               color = IslamicGoldAccent.copy(alpha = 0.2f)
             ) {
               Text(
-                text = "বাকি: $iftarRemainingFormatted",
+                text = when (currentLang) {
+                  "bn" -> "বাকি: $iftarRemainingFormatted"
+                  "ar" -> "متبقي: $iftarRemainingFormatted"
+                  else -> "Remaining: $iftarRemainingFormatted"
+                },
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary,
