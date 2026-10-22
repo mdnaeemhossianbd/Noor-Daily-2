@@ -56,7 +56,14 @@ class MainActivity : ComponentActivity() {
     setContent {
       val context = LocalContext.current
       var currentThemeMode by remember { mutableStateOf(AppThemeMode.DARK_MIDNIGHT) } // Dark Mode Default
-      var currentLang by remember { mutableStateOf("bn") } // 100% Bangla Default as requested by user
+      val appPreferences = remember { context.getSharedPreferences("noor_daily_prefs", android.content.Context.MODE_PRIVATE) }
+      var currentLang by remember {
+        mutableStateOf(appPreferences.getString("app_language", "bn") ?: "bn")
+      }
+      fun updateLanguage(language: String) {
+        currentLang = language
+        appPreferences.edit().putString("app_language", language).apply()
+      }
       var currentTab by remember { mutableStateOf(NoorTab.HOME) }
       var selectedCity by remember { mutableStateOf(SampleIslamicData.cities.first()) }
       var isHanafi by remember { mutableStateOf(true) }
@@ -155,17 +162,17 @@ class MainActivity : ComponentActivity() {
                   LanguageChip(
                     label = "বাং",
                     isSelected = currentLang == "bn",
-                    onClick = { currentLang = "bn" }
+                    onClick = { updateLanguage("bn") }
                   )
                   LanguageChip(
                     label = "EN",
                     isSelected = currentLang == "en",
-                    onClick = { currentLang = "en" }
+                    onClick = { updateLanguage("en") }
                   )
                   LanguageChip(
                     label = "عربي",
                     isSelected = currentLang == "ar",
-                    onClick = { currentLang = "ar" }
+                    onClick = { updateLanguage("ar") }
                   )
                 }
               }
@@ -324,7 +331,7 @@ class MainActivity : ComponentActivity() {
                 currentLang = currentLang,
                 currentThemeMode = currentThemeMode,
                 onThemeModeSelected = { currentThemeMode = it },
-                onLanguageSelected = { currentLang = it }
+                onLanguageSelected = { updateLanguage(it) }
               )
             }
           }
