@@ -37,9 +37,11 @@ object PrayerAlarmScheduler {
 
       val isHanafi = prefs.getBoolean("is_hanafi_madhhab", true)
       val location = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+      val latitude = prefs.getString("gps_latitude", null)?.toDoubleOrNull() ?: location.latitude
+      val longitude = prefs.getString("gps_longitude", null)?.toDoubleOrNull() ?: location.longitude
       val nextTarget = PrayerTimeCalculator.getNextPrayerAlarmTarget(
-        latitude = location.latitude,
-        longitude = location.longitude,
+        latitude = latitude,
+        longitude = longitude,
         isHanafi = isHanafi,
         enabledPrayers = enabledPrayers
       )
