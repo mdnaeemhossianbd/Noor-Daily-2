@@ -43,7 +43,21 @@ fun SettingsScreen(
   onLanguageSelected: (String) -> Unit,
 ) {
   val context = LocalContext.current
-  var soundEnabled by remember { mutableStateOf(true) }
+  val prayerPrefs = remember { context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE) }
+  var soundEnabled by remember {
+    mutableStateOf(prayerPrefs.getBoolean("azan_notifications_enabled", true))
+  }
+  var prayerEnabled by remember {
+    mutableStateOf(
+      mapOf(
+        "Fajr" to prayerPrefs.getBoolean("azan_fajr_enabled", true),
+        "Dhuhr" to prayerPrefs.getBoolean("azan_dhuhr_enabled", true),
+        "Asr" to prayerPrefs.getBoolean("azan_asr_enabled", true),
+        "Maghrib" to prayerPrefs.getBoolean("azan_maghrib_enabled", true),
+        "Isha" to prayerPrefs.getBoolean("azan_isha_enabled", true)
+      )
+    )
+  }
 
   var showAboutDialog by remember { mutableStateOf(false) }
 
@@ -335,8 +349,7 @@ fun SettingsScreen(
                 checked = soundEnabled,
                 onCheckedChange = {
                   soundEnabled = it
-                  val prefs = context.getSharedPreferences("noor_daily_prefs", android.content.Context.MODE_PRIVATE)
-                  prefs.edit().putBoolean("azan_notifications_enabled", it).apply()
+                  prayerPrefs.edit().putBoolean("azan_notifications_enabled", it).apply()
                   if (it) {
                     com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
                   } else {
@@ -346,6 +359,52 @@ fun SettingsScreen(
               )
             }
           )
+
+          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+          val prayerRows = listOf(
+            Triple("Fajr", "ফজর", "الفجر"),
+            Triple("Dhuhr", "যোহর", "الظهر"),
+            Triple("Asr", "আসর", "العصر"),
+            Triple("Maghrib", "মাগরিব", "المغرب"),
+            Triple("Isha", "এশা", "العشاء")
+          )
+          prayerRows.forEach { prayer ->
+            ListItem(
+              headlineContent = {
+                Text(
+                  when (currentLang) {
+                    "bn" -> prayer.second
+                    "ar" -> prayer.third
+                    else -> prayer.first
+                  },
+                  fontWeight = FontWeight.Medium
+                )
+              },
+              supportingContent = {
+                Text(
+                  when (currentLang) {
+                    "bn" -> "এই ওয়াক্তের আযান চালু/বন্ধ"
+                    "ar" -> "تفعيل أو تعطيل أذان هذا الوقت"
+                    else -> "Enable or disable Azan for this prayer"
+                  }
+                )
+              },
+              trailingContent = {
+                Switch(
+                  checked = prayerEnabled[prayer.first] ?: true,
+                  enabled = soundEnabled,
+                  onCheckedChange = { enabled ->
+                    prayerPrefs.edit().putBoolean("azan_${prayer.first.lowercase()}_enabled", enabled).apply()
+                    prayerEnabled = prayerEnabled.toMutableMap().apply { put(prayer.first, enabled) }
+                    com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+                  }
+                )
+              }
+            )
+            if (prayer.first != "Isha") {
+              HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            }
+          }
         }
       }
     }
