@@ -1,6 +1,7 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,6 +37,9 @@ fun IslamicCalendarDialog(
   currentLang: String,
   onDismiss: () -> Unit
 ) {
+  var selectedEventTitle by remember { mutableStateOf<String?>(null) }
+  var selectedEventArabic by remember { mutableStateOf("") }
+  var selectedEventDescription by remember { mutableStateOf("") }
   val todayCal = remember { Calendar.getInstance() }
   val hijriToday = remember { IslamicDateHelper.getHijriDate(todayCal) }
   val (gregFormatted, hijriFormatted) = remember(currentLang) {
@@ -300,7 +304,13 @@ fun IslamicCalendarDialog(
                   if (isCurrentMonth) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                   else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clickable {
+                    selectedEventTitle = event.nameBn
+                    selectedEventArabic = event.nameAr
+                    selectedEventDescription = event.descriptionBn
+                  }
               ) {
                 Row(
                   modifier = Modifier.padding(12.dp),
@@ -352,6 +362,32 @@ fun IslamicCalendarDialog(
           }
         }
       }
+    }
+    if (selectedEventTitle != null) {
+      AlertDialog(
+        onDismissRequest = { selectedEventTitle = null },
+        title = { Text(selectedEventTitle.orEmpty(), fontWeight = FontWeight.Bold) },
+        text = {
+          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(selectedEventArabic, color = MaterialTheme.colorScheme.secondary)
+            Text(selectedEventDescription, lineHeight = 22.sp)
+            Text(
+              text = when (currentLang) {
+                "bn" -> "তারিখ ও চাঁদ দেখার স্থানীয় ঘোষণার কারণে এক দিন পার্থক্য হতে পারে।"
+                "ar" -> "قد يختلف التاريخ يومًا حسب رؤية الهلال والإعلان المحلي."
+                else -> "The date may vary by a day depending on local moon-sighting announcements."
+              },
+              fontSize = 12.sp,
+              color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+          }
+        },
+        confirmButton = {
+          TextButton(onClick = { selectedEventTitle = null }) {
+            Text(AppStrings.text(currentLang, "common.close"))
+          }
+        }
+      )
     }
   }
 }
