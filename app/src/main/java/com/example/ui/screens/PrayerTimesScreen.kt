@@ -139,6 +139,24 @@ fun PrayerTimesScreen(
     )
   }
 
+  // Refresh the displayed times when Admin Panel settings change in the existing RTDB sync.
+  var settingsRevision by remember { mutableIntStateOf(PrayerTimeCalculator.settingsRevision) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(5000)
+      val latestRevision = PrayerTimeCalculator.settingsRevision
+      if (latestRevision != settingsRevision) {
+        settingsRevision = latestRevision
+        prayerCalculation = PrayerTimeCalculator.calculate(
+          latitude = activeLat,
+          longitude = activeLng,
+          isHanafi = isHanafi,
+          timeZoneId = activeTz
+        )
+      }
+    }
+  }
+
   // Countdown seconds ticker
   var secondsRemaining by remember(prayerCalculation) {
     mutableLongStateOf(prayerCalculation.remainingSecondsToNext)
