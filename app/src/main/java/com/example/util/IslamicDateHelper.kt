@@ -137,13 +137,17 @@ object IslamicDateHelper {
         Pair(gregDate, hijriDate)
       }
       "ar" -> {
-        val sdfGreg = SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar"))
+        val sdfGreg = SimpleDateFormat("EEEE، d MMMM yyyy", Locale("ar")).apply {
+          timeZone = calendar.timeZone
+        }
         val gregDate = sdfGreg.format(calendar.time)
         val hijriDate = "${hijri.day} ${hijri.monthNameAr} ${hijri.year} هـ"
         Pair(gregDate, hijriDate)
       }
       else -> {
-        val sdfGreg = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.ENGLISH)
+        val sdfGreg = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.ENGLISH).apply {
+          timeZone = calendar.timeZone
+        }
         val gregDate = sdfGreg.format(calendar.time)
         val hijriDate = "${hijri.day} ${hijri.monthNameEn} ${hijri.year} AH"
         Pair(gregDate, hijriDate)
@@ -155,7 +159,9 @@ object IslamicDateHelper {
    * International Gregorian English Date (e.g., "Thursday, 22 October 2026")
    */
   fun getEnglishIntlDate(calendar: Calendar = Calendar.getInstance()): String {
-    val sdf = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.ENGLISH)
+    val sdf = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.ENGLISH).apply {
+      timeZone = calendar.timeZone
+    }
     return sdf.format(calendar.time)
   }
 
@@ -178,12 +184,12 @@ object IslamicDateHelper {
 
     val bYear = if (gMonth > 3 || (gMonth == 3 && gDay >= 14)) gYear - 593 else gYear - 594
 
-    val apr14 = Calendar.getInstance().apply {
+    val apr14 = Calendar.getInstance(calendar.timeZone).apply {
       set(gYear, Calendar.APRIL, 14, 0, 0, 0)
       set(Calendar.MILLISECOND, 0)
     }
 
-    val currentCal = Calendar.getInstance().apply {
+    val currentCal = Calendar.getInstance(calendar.timeZone).apply {
       time = calendar.time
       set(Calendar.HOUR_OF_DAY, 0)
       set(Calendar.MINUTE, 0)
@@ -192,7 +198,7 @@ object IslamicDateHelper {
     }
 
     val diffDays = if (currentCal.before(apr14)) {
-      val prevApr14 = Calendar.getInstance().apply {
+      val prevApr14 = Calendar.getInstance(calendar.timeZone).apply {
         set(gYear - 1, Calendar.APRIL, 14, 0, 0, 0)
         set(Calendar.MILLISECOND, 0)
       }
