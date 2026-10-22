@@ -95,7 +95,17 @@ class MainActivity : ComponentActivity() {
       LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
           while (isActive) {
-            SampleIslamicData.syncFromFirebase {
+            SampleIslamicData.syncFromFirebase { method, madhhab, adjustments ->
+              appPreferences.edit()
+                .putString("prayer_method", method)
+                .putString("prayer_madhhab", madhhab)
+                .putInt("prayer_adjust_fajr", adjustments["fajr"] ?: 0)
+                .putInt("prayer_adjust_sunrise", adjustments["sunrise"] ?: 0)
+                .putInt("prayer_adjust_dhuhr", adjustments["dhuhr"] ?: 0)
+                .putInt("prayer_adjust_asr", adjustments["asr"] ?: 0)
+                .putInt("prayer_adjust_maghrib", adjustments["maghrib"] ?: 0)
+                .putInt("prayer_adjust_isha", adjustments["isha"] ?: 0)
+                .apply()
               com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
             }
             delay(5000)
