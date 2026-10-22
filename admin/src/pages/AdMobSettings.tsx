@@ -78,14 +78,14 @@ export const AdMobSettings: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-white">App Configuration & AdMob Controls</h1>
         </div>
         <p className="text-xs sm:text-sm text-slate-400">
-          Remotely enable or disable ads and tune display frequencies in the live mobile app without releasing updates
+          These settings are saved in Firebase Realtime Database. They affect ad display only when the Android app's AdMob integration reads and applies them.
         </p>
       </div>
 
       {savedSuccess && (
         <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-300 text-sm">
           <CheckCircle2 className="w-5 h-5 shrink-0" />
-          <span>Settings saved and published live to Cloud Firestore!</span>
+          <span>Settings saved to Firebase Realtime Database.</span>
         </div>
       )}
 

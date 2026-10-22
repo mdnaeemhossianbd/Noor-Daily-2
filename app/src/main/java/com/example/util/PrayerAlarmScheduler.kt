@@ -36,14 +36,37 @@ object PrayerAlarmScheduler {
       }
 
       val isHanafi = prefs.getBoolean("is_hanafi_madhhab", true)
+      PrayerTimeCalculator.updateAdminSettings(
+        method = prefs.getString("prayer_method", "Umm al-Qura") ?: "Umm al-Qura",
+        madhhab = prefs.getString("prayer_madhhab", "Hanafi") ?: "Hanafi",
+        adjustments = mapOf(
+          "fajr" to prefs.getInt("prayer_adjust_fajr", 0),
+          "sunrise" to prefs.getInt("prayer_adjust_sunrise", 0),
+          "dhuhr" to prefs.getInt("prayer_adjust_dhuhr", 0),
+          "asr" to prefs.getInt("prayer_adjust_asr", 0),
+          "maghrib" to prefs.getInt("prayer_adjust_maghrib", 0),
+          "isha" to prefs.getInt("prayer_adjust_isha", 0)
+        )
+      )
+      val useGpsLocation = prefs.getBoolean("use_gps_location", true)
       val location = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
-      val latitude = prefs.getString("gps_latitude", null)?.toDoubleOrNull() ?: location.latitude
-      val longitude = prefs.getString("gps_longitude", null)?.toDoubleOrNull() ?: location.longitude
+      val latitude = if (!useGpsLocation) {
+        prefs.getString("selected_city_latitude", null)?.toDoubleOrNull() ?: location.latitude
+      } else {
+        prefs.getString("gps_latitude", null)?.toDoubleOrNull() ?: location.latitude
+      }
+      val longitude = if (!useGpsLocation) {
+        prefs.getString("selected_city_longitude", null)?.toDoubleOrNull() ?: location.longitude
+      } else {
+        prefs.getString("gps_longitude", null)?.toDoubleOrNull() ?: location.longitude
+      }
+      val timeZoneId = if (!useGpsLocation) prefs.getString("selected_city_timezone", null) else null
       val nextTarget = PrayerTimeCalculator.getNextPrayerAlarmTarget(
         latitude = latitude,
         longitude = longitude,
         isHanafi = isHanafi,
-        enabledPrayers = enabledPrayers
+        enabledPrayers = enabledPrayers,
+        timeZoneId = timeZoneId
       )
 
       val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
@@ -55,6 +78,7 @@ object PrayerAlarmScheduler {
       val intent = Intent(context, PrayerAlarmReceiver::class.java).apply {
         action = PrayerAlarmReceiver.ACTION_PRAYER_ALARM
         putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_NAME, nextTarget.nameBn)
+        putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_KEY, nextTarget.nameEn)
       }
 
       val pendingIntent = PendingIntent.getBroadcast(

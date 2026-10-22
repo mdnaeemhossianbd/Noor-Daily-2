@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ref, 
   set, 
+  update,
   remove, 
   onValue 
 } from 'firebase/database';
@@ -169,7 +170,7 @@ export const PostsManager: React.FC = () => {
         const catId = cat.id || `cat_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         catMap[catId] = { ...cat, id: catId, updatedAt: Date.now() };
       }
-      await set(ref(db, 'categories'), catMap);
+      await update(ref(db, 'categories'), catMap);
       setCategories(Object.values(catMap));
       localStorage.setItem('noor_categories', JSON.stringify(Object.values(catMap)));
 
@@ -178,7 +179,7 @@ export const PostsManager: React.FC = () => {
         const subId = sub.id || `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         subMap[subId] = { ...sub, id: subId, updatedAt: Date.now() };
       }
-      await set(ref(db, 'subcategories'), subMap);
+      await update(ref(db, 'subcategories'), subMap);
       setSubcategories(Object.values(subMap));
       localStorage.setItem('noor_subcategories', JSON.stringify(Object.values(subMap)));
 
@@ -188,7 +189,7 @@ export const PostsManager: React.FC = () => {
         const postId = post.id || `post_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         postMap[postId] = { ...post, id: postId, updatedAt: Date.now() };
       }
-      await set(ref(db, 'posts'), postMap);
+      await update(ref(db, 'posts'), postMap);
       setPosts(Object.values(postMap));
       localStorage.setItem('noor_posts', JSON.stringify(Object.values(postMap)));
 

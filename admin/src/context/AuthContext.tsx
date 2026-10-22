@@ -38,68 +38,21 @@ export const AUTHORIZED_ADMIN_EMAILS = [
 
 export function isEmailAuthorized(email: string | null | undefined): boolean {
   if (!email) return false;
-  const lower = email.trim().toLowerCase();
-  return (
-    AUTHORIZED_ADMIN_EMAILS.includes(lower) ||
-    lower.endsWith('@noordaily.com')
-  );
+  return AUTHORIZED_ADMIN_EMAILS.includes(email.trim().toLowerCase());
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Read session synchronously from localStorage so page refresh NEVER logs the user out!
-  const [currentUser, setCurrentUser] = useState<AdminUser | null>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && isEmailAuthorized(parsed.email)) {
-          return parsed;
-        }
-      }
-    } catch (e) {
-      console.warn('Could not read cached auth session:', e);
-    }
-    return null;
-  });
-
-  const [isAdmin, setIsAdmin] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return Boolean(parsed && isEmailAuthorized(parsed.email));
-      }
-    } catch {
-      return false;
-    }
-    return false;
-  });
-
-  // If we already have a verified user session in localStorage, loading is false right away!
-  const [loading, setLoading] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed && isEmailAuthorized(parsed.email)) {
-          return false;
-        }
-      }
-    } catch {}
-    return true;
-  });
+  // Firebase Auth is the source of truth; cached localStorage data is never treated as proof of login.
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-
-    // Safety timeout to ensure loading never stays true
-    const timer = setTimeout(() => {
-      if (isMounted) setLoading(false);
-    }, 500);
 
     let unsubscribe = () => {};
     try {
@@ -133,24 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(adminUser));
           setAuthError(null);
         } else {
-          // If Firebase reports null on fresh page reload, preserve existing valid localStorage session
-          const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-          if (saved) {
-            try {
-              const parsed = JSON.parse(saved);
-              if (parsed && isEmailAuthorized(parsed.email)) {
-                setCurrentUser(parsed);
-                setIsAdmin(true);
-              } else {
-                setCurrentUser(null);
-                setIsAdmin(false);
-                localStorage.removeItem(LOCAL_STORAGE_KEY);
-              }
-            } catch {
-              setCurrentUser(null);
-              setIsAdmin(false);
-            }
-          }
+          setCurrentUser(null);
+          setIsAdmin(false);
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
         }
         setLoading(false);
       });
@@ -161,7 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
       unsubscribe();
     };
   }, []);

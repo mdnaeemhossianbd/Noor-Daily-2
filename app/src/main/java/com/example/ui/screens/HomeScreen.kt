@@ -76,8 +76,9 @@ fun HomeScreen(
   var showIslamicQuizDialog by remember { mutableStateOf(false) }
   var showCityDialog by remember { mutableStateOf(false) }
 
-  // Country & City Selection State (GPS vs Manual City)
-  var isUsingGps by remember { mutableStateOf(true) }
+  // Keep the same GPS/manual city choice across Home, Prayer Times, and app restarts.
+  val locationPrefs = remember { context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE) }
+  var isUsingGps by remember { mutableStateOf(locationPrefs.getBoolean("use_gps_location", true)) }
   var currentSelectedCity by remember { mutableStateOf(selectedCity) }
 
   // Dynamic Location State
@@ -103,12 +104,13 @@ fun HomeScreen(
     }
   }
 
-  val (gregFormatted, hijriFormatted) = remember(currentLang) {
-    IslamicDateHelper.getFormattedDates(currentLang)
+  val dateCalendar = if (isUsingGps) {
+    java.util.Calendar.getInstance()
+  } else {
+    java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(currentSelectedCity.timeZoneId))
   }
-  val banglaSolarDate = remember {
-    IslamicDateHelper.getBanglaSolarDate()
-  }
+  val (gregFormatted, hijriFormatted) = IslamicDateHelper.getFormattedDates(currentLang, dateCalendar)
+  val banglaSolarDate = IslamicDateHelper.getBanglaSolarDate(dateCalendar)
 
   // Notification Permission State
   var hasNotificationPermission by remember {
@@ -124,7 +126,8 @@ fun HomeScreen(
   // Location Permission State
   var hasLocationPermission by remember {
     mutableStateOf(
-      ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+      ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
     )
   }
 
@@ -146,6 +149,7 @@ fun HomeScreen(
       userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
       LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
         userLocationInfo = freshLocation
+        com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
       }
     }
   }
@@ -155,6 +159,7 @@ fun HomeScreen(
     if (hasLocationPermission) {
       LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
         userLocationInfo = freshLocation
+        com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
       }
     }
   }
@@ -223,7 +228,7 @@ fun HomeScreen(
       if (secondsRemaining > 0) {
         secondsRemaining--
       } else {
-        isAzanPlaying = true
+        // AlarmManager/foreground service owns scheduled playback; avoid a duplicate in-screen player.
         prayerCalculation = PrayerTimeCalculator.calculate(
           latitude = activeLat,
           longitude = activeLng,
@@ -374,6 +379,7 @@ fun HomeScreen(
               Surface(
                 onClick = {
                   isUsingGps = true
+                  locationPrefs.edit().putBoolean("use_gps_location", true).apply()
                   if (!hasLocationPermission) {
                     locationPermissionLauncher.launch(
                       arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -382,6 +388,7 @@ fun HomeScreen(
                     userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
                     LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
                       userLocationInfo = freshLocation
+                      com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
                     }
                   }
                 },
@@ -1485,17 +1492,27 @@ fun HomeScreen(
       isUsingGps = isUsingGps,
       onSelectGps = {
         isUsingGps = true
+        locationPrefs.edit().putBoolean("use_gps_location", true).apply()
         userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
         if (hasLocationPermission) {
           LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
             userLocationInfo = freshLocation
+            com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
           }
         }
       },
       onSelectCity = { city ->
         isUsingGps = false
         currentSelectedCity = city
+        locationPrefs.edit()
+          .putBoolean("use_gps_location", false)
+          .putString("selected_city_name_en", city.nameEn)
+          .putString("selected_city_latitude", city.latitude.toString())
+          .putString("selected_city_longitude", city.longitude.toString())
+          .putString("selected_city_timezone", city.timeZoneId)
+          .apply()
         onCitySelected(city)
+        com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
       },
       onDismiss = { showCityDialog = false }
     )

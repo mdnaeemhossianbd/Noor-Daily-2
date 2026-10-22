@@ -76,7 +76,15 @@ fun SettingsScreen(
   ) { isGranted ->
     hasNotificationPermission = isGranted
     if (isGranted) {
-      Toast.makeText(context, "আযান নোটিফিকেশন চালু করা হয়েছে", Toast.LENGTH_SHORT).show()
+      Toast.makeText(
+        context,
+        when (currentLang) {
+          "ar" -> "تم تفعيل إشعارات الأذان"
+          "en" -> "Azan notifications enabled"
+          else -> "আযান নোটিফিকেশন চালু করা হয়েছে"
+        },
+        Toast.LENGTH_SHORT
+      ).show()
     }
   }
 
@@ -505,7 +513,13 @@ fun SettingsScreen(
               )
             },
             supportingContent = {
-              Text("Noor Daily • v1.2.0 • মিশন ও উৎসসমূহ")
+              Text(
+                when (currentLang) {
+                  "bn" -> "Noor Daily • v1.2.0 • মিশন ও উৎসসমূহ"
+                  "ar" -> "نور ديلي • الإصدار 1.2.0 • الرسالة والمصادر"
+                  else -> "Noor Daily • v1.2.0 • Mission & Sources"
+                }
+              )
             },
             leadingContent = {
               Icon(

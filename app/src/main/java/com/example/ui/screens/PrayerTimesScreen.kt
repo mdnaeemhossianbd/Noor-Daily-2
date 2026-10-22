@@ -48,21 +48,32 @@ fun PrayerTimesScreen(
   onMadhhabToggled: (Boolean) -> Unit,
 ) {
   val context = LocalContext.current
+  val locationPrefs = remember { context.getSharedPreferences("noor_daily_prefs", android.content.Context.MODE_PRIVATE) }
 
-  // User location & city selection state
-  var isUsingGps by remember { mutableStateOf(true) }
+  // User location & city selection state, persisted across tab/app restarts.
+  var isUsingGps by remember { mutableStateOf(locationPrefs.getBoolean("use_gps_location", true)) }
   var currentSelectedCity by remember { mutableStateOf(selectedCity) }
   var showCityDialog by remember { mutableStateOf(false) }
 
-  val (gregFormatted, hijriFormatted) = remember(currentLang) {
-    IslamicDateHelper.getFormattedDates(currentLang)
+  val dateCalendar = if (isUsingGps) {
+    java.util.Calendar.getInstance()
+  } else {
+    java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(currentSelectedCity.timeZoneId))
   }
-  val banglaSolarDate = remember {
-    IslamicDateHelper.getBanglaSolarDate()
-  }
+  val (gregFormatted, hijriFormatted) = IslamicDateHelper.getFormattedDates(currentLang, dateCalendar)
+  val englishIntlDate = IslamicDateHelper.getEnglishIntlDate(dateCalendar)
+  val banglaSolarDate = IslamicDateHelper.getBanglaSolarDate(dateCalendar)
 
   var userLocationInfo by remember {
     mutableStateOf(LocationAndNotificationHelper.getCurrentDeviceLocation(context))
+  }
+
+  // Refresh coordinates when this screen opens; keep cached coordinates as an immediate fallback.
+  LaunchedEffect(Unit) {
+    LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+      userLocationInfo = freshLocation
+      com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+    }
   }
 
   // Location Permission Launcher
@@ -73,6 +84,10 @@ fun PrayerTimesScreen(
       permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     if (granted) {
       userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+      LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+        userLocationInfo = freshLocation
+        com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+      }
     }
   }
 
@@ -124,6 +139,24 @@ fun PrayerTimesScreen(
     )
   }
 
+  // Refresh the displayed times when Admin Panel settings change in the existing RTDB sync.
+  var settingsRevision by remember { mutableIntStateOf(PrayerTimeCalculator.settingsRevision) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(5000)
+      val latestRevision = PrayerTimeCalculator.settingsRevision
+      if (latestRevision != settingsRevision) {
+        settingsRevision = latestRevision
+        prayerCalculation = PrayerTimeCalculator.calculate(
+          latitude = activeLat,
+          longitude = activeLng,
+          isHanafi = isHanafi,
+          timeZoneId = activeTz
+        )
+      }
+    }
+  }
+
   // Countdown seconds ticker
   var secondsRemaining by remember(prayerCalculation) {
     mutableLongStateOf(prayerCalculation.remainingSecondsToNext)
@@ -144,7 +177,8 @@ fun PrayerTimesScreen(
       if (secondsRemaining > 0) {
         secondsRemaining--
       } else {
-        isAzanPlaying = true
+        // Background AlarmManager/foreground-service scheduling is the single playback source.
+        // Do not start a second in-screen player at the same prayer time.
         prayerCalculation = PrayerTimeCalculator.calculate(
           latitude = activeLat,
           longitude = activeLng,
@@ -229,7 +263,15 @@ fun PrayerTimesScreen(
         ) {
           Icon(Icons.Default.VolumeUp, contentDescription = null, modifier = Modifier.size(16.dp))
           Spacer(modifier = Modifier.width(4.dp))
-          Text("আযান টেস্ট", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+          Text(
+            when (currentLang) {
+              "ar" -> "اختبار الأذان"
+              "en" -> "Test Azan"
+              else -> "আযান টেস্ট"
+            },
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+          )
         }
       }
     }
@@ -261,13 +303,21 @@ fun PrayerTimesScreen(
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
               Text(
-                text = "নামাজের ওয়াক্ত হয়েছে • আযান বাজছে",
+                text = when (currentLang) {
+                  "ar" -> "دخل وقت الصلاة • الأذان يعمل"
+                  "en" -> "Prayer time has arrived • Azan playing"
+                  else -> "নামাজের ওয়াক্ত হয়েছে • আযান বাজছে"
+                },
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp
               )
               Text(
-                text = "আর $azanSecondsLeft সেকেন্ড বাকি (সাউন্ড ও ভাইব্রেশন চলছে)",
+                text = when (currentLang) {
+                  "ar" -> "متبقي $azanSecondsLeft ثانية (الصوت والاهتزاز يعملان)"
+                  "en" -> "$azanSecondsLeft seconds remaining (sound and vibration active)"
+                  else -> "আর $azanSecondsLeft সেকেন্ড বাকি (সাউন্ড ও ভাইব্রেশন চলছে)"
+                },
                 color = IslamicGoldLight,
                 fontSize = 12.sp
               )
@@ -364,13 +414,20 @@ fun PrayerTimesScreen(
               Surface(
                 onClick = {
                   isUsingGps = true
-                  val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                  locationPrefs.edit().putBoolean("use_gps_location", true).apply()
+                  val hasPermission =
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                   if (!hasPermission) {
                     locationPermissionLauncher.launch(
                       arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
                     )
                   } else {
                     userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+                    LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+                      userLocationInfo = freshLocation
+                      com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+                    }
                   }
                 },
                 shape = RoundedCornerShape(10.dp),
@@ -845,12 +902,25 @@ fun PrayerTimesScreen(
       isUsingGps = isUsingGps,
       onSelectGps = {
         isUsingGps = true
+        locationPrefs.edit().putBoolean("use_gps_location", true).apply()
         userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+        LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+          userLocationInfo = freshLocation
+          com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+        }
       },
       onSelectCity = { city ->
         isUsingGps = false
         currentSelectedCity = city
+        locationPrefs.edit()
+          .putBoolean("use_gps_location", false)
+          .putString("selected_city_name_en", city.nameEn)
+          .putString("selected_city_latitude", city.latitude.toString())
+          .putString("selected_city_longitude", city.longitude.toString())
+          .putString("selected_city_timezone", city.timeZoneId)
+          .apply()
         onCitySelected(city)
+        com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
       },
       onDismiss = { showCityDialog = false }
     )

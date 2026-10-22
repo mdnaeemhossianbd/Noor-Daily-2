@@ -7,6 +7,7 @@ import com.example.model.CityLocation
 import com.example.model.IslamicCategory
 import com.example.model.IslamicPost
 import com.example.model.IslamicSubcategory
+import com.example.util.PrayerTimeCalculator
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -1213,7 +1214,7 @@ object SampleIslamicData {
 
   private const val BASE_RTDB_URL = "https://gen-lang-client-0048418625-default-rtdb.asia-southeast1.firebasedatabase.app"
 
-  fun syncFromFirebase() {
+  fun syncFromFirebase(onPrayerSettingsUpdated: ((String, String, Map<String, Int>) -> Unit)? = null) {
     try {
       // 1. Fetch Categories from Realtime Database
       val catsReq = Request.Builder().url("$BASE_RTDB_URL/categories.json").build()
@@ -1269,7 +1270,40 @@ object SampleIslamicData {
         }
       }
 
-      // 4. Update counts
+      // 4. Load Admin Panel prayer configuration from the same Realtime Database.
+      val prayerSettingsReq = Request.Builder().url("$BASE_RTDB_URL/prayer_settings.json").build()
+      httpClient.newCall(prayerSettingsReq).execute().use { response ->
+        if (response.isSuccessful) {
+          val settingsBody = response.body?.string()
+          if (!settingsBody.isNullOrBlank() && settingsBody != "null") {
+            val settings = JSONObject(settingsBody)
+            val adjustmentsJson = settings.optJSONObject("manualAdjustments") ?: JSONObject()
+            val adjustments = mapOf(
+              "fajr" to adjustmentsJson.optInt("fajr", 0),
+              "sunrise" to adjustmentsJson.optInt("sunrise", 0),
+              "dhuhr" to adjustmentsJson.optInt("dhuhr", 0),
+              "asr" to adjustmentsJson.optInt("asr", 0),
+              "maghrib" to adjustmentsJson.optInt("maghrib", 0),
+              "isha" to adjustmentsJson.optInt("isha", 0)
+            )
+            val method = settings.optString("defaultMethod", "Umm al-Qura")
+            val madhhab = settings.optString("defaultMadhhab", "Hanafi")
+            val previousRevision = PrayerTimeCalculator.settingsRevision
+            PrayerTimeCalculator.updateAdminSettings(
+              method = method,
+              madhhab = madhhab,
+              adjustments = adjustments
+            )
+            if (PrayerTimeCalculator.settingsRevision != previousRevision) {
+              onPrayerSettingsUpdated?.invoke(method, madhhab, adjustments)
+            }
+          }
+        } else {
+          android.util.Log.w("SampleIslamicData", "Prayer settings sync HTTP ${response.code}")
+        }
+      }
+
+      // 5. Update counts
       updateCounts()
     } catch (e: Exception) {
       android.util.Log.w("SampleIslamicData", "Realtime sync notice: ${e.message}")

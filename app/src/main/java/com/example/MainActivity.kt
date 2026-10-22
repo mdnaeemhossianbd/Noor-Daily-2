@@ -21,6 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,7 +67,13 @@ class MainActivity : ComponentActivity() {
         appPreferences.edit().putString("app_language", language).apply()
       }
       var currentTab by remember { mutableStateOf(NoorTab.HOME) }
-      var selectedCity by remember { mutableStateOf(SampleIslamicData.cities.first()) }
+      var selectedCity by remember {
+        val savedCityName = appPreferences.getString("selected_city_name_en", null)
+        mutableStateOf(
+          SampleIslamicData.cities.firstOrNull { it.nameEn == savedCityName }
+            ?: SampleIslamicData.cities.first()
+        )
+      }
       var isHanafi by remember { mutableStateOf(true) }
       val bookmarkedIds = remember { mutableStateListOf("post_ayat_today", "post_tahajjud") }
       var activePost by remember { mutableStateOf<IslamicPost?>(null) }
@@ -87,7 +95,19 @@ class MainActivity : ComponentActivity() {
       LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
           while (isActive) {
-            SampleIslamicData.syncFromFirebase()
+            SampleIslamicData.syncFromFirebase { method, madhhab, adjustments ->
+              appPreferences.edit()
+                .putString("prayer_method", method)
+                .putString("prayer_madhhab", madhhab)
+                .putInt("prayer_adjust_fajr", adjustments["fajr"] ?: 0)
+                .putInt("prayer_adjust_sunrise", adjustments["sunrise"] ?: 0)
+                .putInt("prayer_adjust_dhuhr", adjustments["dhuhr"] ?: 0)
+                .putInt("prayer_adjust_asr", adjustments["asr"] ?: 0)
+                .putInt("prayer_adjust_maghrib", adjustments["maghrib"] ?: 0)
+                .putInt("prayer_adjust_isha", adjustments["isha"] ?: 0)
+                .apply()
+              com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+            }
             delay(5000)
           }
         }
@@ -96,6 +116,7 @@ class MainActivity : ComponentActivity() {
       var showSplash by remember { mutableStateOf(true) }
 
       NoorDailyTheme(themeMode = currentThemeMode) {
+        CompositionLocalProvider(LocalLayoutDirection provides if (currentLang == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
         if (showSplash) {
           SplashScreen(onAnimationFinished = { showSplash = false })
         } else {
@@ -353,6 +374,7 @@ class MainActivity : ComponentActivity() {
               onDismiss = { activePost = null }
             )
           }
+        }
         }
       }
     }
