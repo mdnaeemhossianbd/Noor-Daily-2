@@ -26,7 +26,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.AllahName
 import com.example.data.NamesOfAllahData
-import com.example.util.IslamicDateHelper
 import com.example.util.AppStrings
 
 @Composable
