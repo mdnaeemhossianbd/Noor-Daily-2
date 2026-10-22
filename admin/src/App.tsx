@@ -11,6 +11,8 @@ import { QuizManager } from './pages/QuizManager';
 import { CalendarManager } from './pages/CalendarManager';
 import { AdMobSettings } from './pages/AdMobSettings';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
+import { PrayerConfig } from './pages/PrayerConfig';
+import { AuditLogs } from './pages/AuditLogs';
 
 export const App: React.FC = () => {
   return (
@@ -36,9 +38,9 @@ export const App: React.FC = () => {
             <Route path="posts" element={<PostsManager />} />
             <Route path="quizzes" element={<QuizManager />} />
             <Route path="calendar" element={<CalendarManager />} />
-            <Route path="prayer-config" element={<div className="text-white p-6">Prayer configuration editor</div>} />
+            <Route path="prayer-config" element={<PrayerConfig />} />
             <Route path="admob-settings" element={<AdMobSettings />} />
-            <Route path="audit-logs" element={<div className="text-white p-6">Full audit log viewer</div>} />
+            <Route path="audit-logs" element={<AuditLogs />} />
           </Route>
 
           {/* Catch-all Fallback */}
