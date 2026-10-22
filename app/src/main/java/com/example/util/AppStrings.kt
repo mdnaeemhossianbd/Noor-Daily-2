@@ -8,6 +8,7 @@ object AppStrings {
   private val translations: Map<String, List<String>> = mapOf(
     "tasbih.title" to listOf("ডিজিটাল তাসবীহ ও জিকির", "Digital Tasbih & Dhikr", "السبحة الرقمية والذكر"),
     "tasbih.target" to listOf("লক্ষ্য", "Target", "الهدف"),
+    "tasbih.meaning" to listOf("অর্থ", "Bangla meaning", "المعنى البنغالي"),
     "tasbih.completed" to listOf("সম্পন্ন চক্কর", "Rounds completed", "الجولات المكتملة"),
     "tasbih.tap" to listOf("ট্যাপ করুন", "Tap to count", "اضغط للعد"),
     "tasbih.total" to listOf("মোট জিকির", "Total dhikr", "إجمالي الذكر"),
