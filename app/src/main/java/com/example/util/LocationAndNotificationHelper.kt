@@ -406,7 +406,8 @@ object LocationAndNotificationHelper {
       }
     }
 
-    val isBn = Locale.getDefault().language == "bn"
+    val isBn = language == "bn"
+    val isAr = language == "ar"
     if (closestCity != null && minDistance <= 40.0) {
       val cityName = if (isBn) closestCity.nameBn else closestCity.nameEn
       val regionName = if (isBn) closestCity.divisionBn else "Bangladesh"
@@ -428,20 +429,32 @@ object LocationAndNotificationHelper {
     if (nearestSaudi != null) {
       val distance = calculateDistanceKm(lat, lon, nearestSaudi.third.first, nearestSaudi.third.second)
       if (distance <= 40.0) {
-        val cityName = if (isBn) when (nearestSaudi.second) {
-          "Taif" -> "তায়েফ"
-          "Makkah" -> "মক্কা"
-          "Jeddah" -> "জেদ্দা"
-          "Riyadh" -> "রিয়াদ"
-          "Madinah" -> "মদিনা"
-          else -> "দাম্মাম"
-        } else nearestSaudi.second
-        val countryName = if (isBn) "সৌদি আরব" else "Saudi Arabia"
+        val cityName = when {
+          isBn -> when (nearestSaudi.second) {
+            "Taif" -> "তায়েফ"
+            "Makkah" -> "মক্কা"
+            "Jeddah" -> "জেদ্দা"
+            "Riyadh" -> "রিয়াদ"
+            "Madinah" -> "মদিনা"
+            else -> "দাম্মাম"
+          }
+          isAr -> nearestSaudi.first
+          else -> nearestSaudi.second
+        }
+        val countryName = when {
+          isBn -> "সৌদি আরব"
+          isAr -> "المملكة العربية السعودية"
+          else -> "Saudi Arabia"
+        }
         return "$cityName, $countryName"
       }
     }
 
     // Never claim that a location outside Bangladesh is in Bangladesh when reverse geocoding fails.
-    return if (isBn) "GPS অবস্থান" else "GPS location"
+    return when {
+      isBn -> "GPS অবস্থান"
+      isAr -> "موقع GPS"
+      else -> "GPS location"
+    }
   }
 }
