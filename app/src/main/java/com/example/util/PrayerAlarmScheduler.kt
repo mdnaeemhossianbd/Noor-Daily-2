@@ -78,6 +78,7 @@ object PrayerAlarmScheduler {
       val intent = Intent(context, PrayerAlarmReceiver::class.java).apply {
         action = PrayerAlarmReceiver.ACTION_PRAYER_ALARM
         putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_NAME, nextTarget.nameBn)
+        putExtra(PrayerAlarmReceiver.EXTRA_PRAYER_KEY, nextTarget.nameEn)
       }
 
       val pendingIntent = PendingIntent.getBroadcast(
