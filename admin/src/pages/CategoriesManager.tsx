@@ -6,7 +6,7 @@ import {
   remove, 
   onValue 
 } from 'firebase/database';
-import { db } from '../api/firebase';
+import { auth, db } from '../api/firebase';
 import { Category, Subcategory } from '../types/schema';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -94,6 +94,16 @@ export const CategoriesManager: React.FC = () => {
   const syncDefaults = async () => {
     try {
       setSyncing(true);
+      const authenticatedUser = auth.currentUser;
+      if (!authenticatedUser) {
+        throw new Error('Admin session expired. Please sign out and log in again with habitsk50@gmail.com.');
+      }
+      // Refresh the ID token so RTDB rules evaluate the latest authenticated email/claims.
+      await authenticatedUser.getIdToken(true);
+      const signedInEmail = authenticatedUser.email?.trim().toLowerCase();
+      if (signedInEmail !== 'habitsk50@gmail.com' && signedInEmail !== 'admin@noordaily.com') {
+        throw new Error('This signed-in email is not authorized to sync categories.');
+      }
       // Seed categories
       const catMap: Record<string, Category> = {};
       const catsToSeed = categories.length > 0 ? categories : defaultCategories;
