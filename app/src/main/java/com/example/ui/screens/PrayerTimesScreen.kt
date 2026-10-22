@@ -33,6 +33,7 @@ import androidx.core.content.ContextCompat
 import com.example.model.CityLocation
 import com.example.ui.components.CitySelectionDialog
 import com.example.ui.theme.*
+import com.example.util.IslamicDateHelper
 import com.example.util.LocationAndNotificationHelper
 import com.example.util.PrayerTimeCalculator
 import kotlinx.coroutines.delay
@@ -52,6 +53,13 @@ fun PrayerTimesScreen(
   var isUsingGps by remember { mutableStateOf(true) }
   var currentSelectedCity by remember { mutableStateOf(selectedCity) }
   var showCityDialog by remember { mutableStateOf(false) }
+
+  val (gregFormatted, hijriFormatted) = remember(currentLang) {
+    IslamicDateHelper.getFormattedDates(currentLang)
+  }
+  val banglaSolarDate = remember {
+    IslamicDateHelper.getBanglaSolarDate()
+  }
 
   var userLocationInfo by remember {
     mutableStateOf(LocationAndNotificationHelper.getCurrentDeviceLocation(context))
@@ -272,7 +280,7 @@ fun PrayerTimesScreen(
       }
     }
 
-    // Location Info Card (Real User Location or Selected City)
+    // Location Info & Multi-Calendar Card (English & Hijri formatted)
     item {
       Surface(
         shape = RoundedCornerShape(16.dp),
@@ -280,107 +288,280 @@ fun PrayerTimesScreen(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
         modifier = Modifier.fillMaxWidth()
       ) {
-        Row(
-          modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
+        Column(
+          modifier = Modifier.padding(14.dp)
         ) {
-          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Box(
-              modifier = Modifier
-                .size(34.dp)
-                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-              contentAlignment = Alignment.Center
-            ) {
-              Icon(
-                if (isUsingGps) Icons.Default.LocationOn else Icons.Default.Public,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-              )
-            }
-            Spacer(modifier = Modifier.width(10.dp))
-            Column {
-              Text(
-                text = if (isUsingGps) userLocationInfo.addressName else (if (currentLang == "bn") currentSelectedCity.nameBn else currentSelectedCity.nameEn),
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-              )
-              Text(
-                text = if (isUsingGps) {
-                  when (currentLang) {
-                    "bn" -> "ডিভাইসের অবস্থান অনুযায়ী সময় সমন্বিত"
-                    else -> "Synchronized with device location"
-                  }
-                } else {
-                  when (currentLang) {
-                    "bn" -> "নির্বাচিত শহর: ${if (currentLang == "bn") currentSelectedCity.nameBn else currentSelectedCity.nameEn}"
-                    else -> "Selected City: ${currentSelectedCity.nameEn}"
-                  }
-                },
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.primary
-              )
-            }
-          }
-
-          // Buttons
-          Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(
-              onClick = { showCityDialog = true },
-              shape = RoundedCornerShape(10.dp),
-              color = if (!isUsingGps) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
-              border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-            ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+          // Row 1: Location & Action Buttons
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+              Box(
+                modifier = Modifier
+                  .size(34.dp)
+                  .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
               ) {
-                Icon(Icons.Default.Public, contentDescription = "City", modifier = Modifier.size(13.dp), tint = if (!isUsingGps) Color.White else MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                  if (isUsingGps) Icons.Default.LocationOn else Icons.Default.Public,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(18.dp)
+                )
+              }
+              Spacer(modifier = Modifier.width(10.dp))
+              Column {
                 Text(
-                  text = when (currentLang) { "bn" -> "দেশ/শহর"; else -> "City" },
-                  fontSize = 11.sp,
+                  text = if (isUsingGps) userLocationInfo.addressName else (if (currentLang == "bn") currentSelectedCity.nameBn else currentSelectedCity.nameEn),
                   fontWeight = FontWeight.Bold,
-                  color = if (!isUsingGps) Color.White else MaterialTheme.colorScheme.primary
+                  fontSize = 13.sp,
+                  maxLines = 1,
+                  overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                  text = if (isUsingGps) {
+                    when (currentLang) {
+                      "bn" -> "ডিভাইসের অবস্থান অনুযায়ী সময় সমন্বিত"
+                      else -> "Synchronized with device location"
+                    }
+                  } else {
+                    when (currentLang) {
+                      "bn" -> "নির্বাচিত শহর: ${if (currentLang == "bn") currentSelectedCity.nameBn else currentSelectedCity.nameEn}"
+                      else -> "Selected City: ${currentSelectedCity.nameEn}"
+                    }
+                  },
+                  fontSize = 11.sp,
+                  color = MaterialTheme.colorScheme.primary
                 )
               }
             }
 
-            Surface(
-              onClick = {
-                isUsingGps = true
-                val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                if (!hasPermission) {
-                  locationPermissionLauncher.launch(
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-                  )
-                } else {
-                  userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
-                }
-              },
-              shape = RoundedCornerShape(10.dp),
-              color = if (isUsingGps) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-              border = BorderStroke(1.dp, IslamicEmeraldLight.copy(alpha = 0.3f))
-            ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Buttons
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+              Surface(
+                onClick = { showCityDialog = true },
+                shape = RoundedCornerShape(10.dp),
+                color = if (!isUsingGps) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
               ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(Icons.Default.Public, contentDescription = "City", modifier = Modifier.size(13.dp), tint = if (!isUsingGps) Color.White else MaterialTheme.colorScheme.primary)
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = when (currentLang) { "bn" -> "দেশ/শহর"; else -> "City" },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (!isUsingGps) Color.White else MaterialTheme.colorScheme.primary
+                  )
+                }
+              }
+
+              Surface(
+                onClick = {
+                  isUsingGps = true
+                  val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                  if (!hasPermission) {
+                    locationPermissionLauncher.launch(
+                      arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                    )
+                  } else {
+                    userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+                  }
+                },
+                shape = RoundedCornerShape(10.dp),
+                color = if (isUsingGps) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, IslamicEmeraldLight.copy(alpha = 0.3f))
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(
+                    Icons.Default.MyLocation,
+                    contentDescription = "GPS",
+                    tint = if (isUsingGps) Color.White else MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(13.dp)
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = "GPS",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isUsingGps) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
+              }
+            }
+          }
+
+          HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+            modifier = Modifier.padding(vertical = 10.dp)
+          )
+
+          // 1. হিজরির উপরে: ইংরেজি ক্যালেন্ডার (English Calendar Bar)
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                  Icons.Default.MyLocation,
-                  contentDescription = "GPS",
-                  tint = if (isUsingGps) Color.White else MaterialTheme.colorScheme.primary,
-                  modifier = Modifier.size(13.dp)
+                  Icons.Default.Today,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(15.dp)
                 )
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                  text = "GPS",
+                  text = when (currentLang) {
+                    "bn" -> "ইংরেজি ক্যালেন্ডার:"
+                    "ar" -> "التقويم الميلادي:"
+                    else -> "English Calendar:"
+                  },
                   fontSize = 11.sp,
                   fontWeight = FontWeight.Bold,
-                  color = if (isUsingGps) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                  color = MaterialTheme.colorScheme.primary
+                )
+              }
+              Text(
+                text = gregFormatted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.height(6.dp))
+
+          // 2. মাঝে: হিজরি ক্যালেন্ডার (Hijri Calendar Bar)
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  Icons.Default.CalendarMonth,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  text = when (currentLang) {
+                    "bn" -> "হিজরি ক্যালেন্ডার:"
+                    "ar" -> "التقويم الهجري:"
+                    else -> "Hijri Calendar:"
+                  },
+                  fontSize = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.primary
+                )
+              }
+              Text(
+                text = hijriFormatted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.height(6.dp))
+
+          // 3. হিজরির নিচে: আন্তর্জাতিক ইংরেজি ক্যালেন্ডার (International English Calendar Bar)
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f),
+            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.3f)),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  Icons.Default.Event,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.tertiary,
+                  modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  text = when (currentLang) {
+                    "bn" -> "আন্তর্জাতিক ইংরেজি:"
+                    "ar" -> "التاريخ الدولي:"
+                    else -> "International (Intl):"
+                  },
+                  fontSize = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.tertiary
+                )
+              }
+              Text(
+                text = englishIntlDate,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+              )
+            }
+          }
+
+          if (currentLang == "bn") {
+            Spacer(modifier = Modifier.height(6.dp))
+            // ৪. বাংলা ক্যালেন্ডার (বঙ্গাব্দ)
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+              border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(
+                    Icons.Default.DateRange,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(15.dp)
+                  )
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    text = "বাংলা ক্যালেন্ডার (বঙ্গাব্দ):",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary
+                  )
+                }
+                Text(
+                  text = banglaSolarDate,
+                  fontSize = 12.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface
                 )
               }
             }

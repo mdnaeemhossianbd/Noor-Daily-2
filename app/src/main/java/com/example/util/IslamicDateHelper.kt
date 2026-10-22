@@ -7,6 +7,8 @@ import java.util.Locale
 import java.util.TimeZone
 import kotlin.math.floor
 
+import android.os.Build
+
 /**
  * Islamic Date, Gregorian Date, Live Clock, and Hijri Calendar Calculations.
  */
@@ -49,16 +51,39 @@ object IslamicDateHelper {
   )
 
   /**
-   * Converts a Gregorian Calendar instance into a calculated Hijri Date.
-   * Uses astronomical Kuwati/Umm al-Qura approximation.
+   * Converts a Gregorian Calendar instance into the authentic Umm al-Qura Hijri Date.
+   * Leverages java.time.chrono.HijrahDate (official astronomical Umm al-Qura calendar).
    */
   fun getHijriDate(calendar: Calendar = Calendar.getInstance()): HijriDate {
-    val year = calendar.get(Calendar.YEAR)
-    val month = calendar.get(Calendar.MONTH) + 1
-    val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val gYear = calendar.get(Calendar.YEAR)
+    val gMonth = calendar.get(Calendar.MONTH) + 1
+    val gDay = calendar.get(Calendar.DAY_OF_MONTH)
 
-    var m = month
-    var y = year
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      try {
+        val localDate = java.time.LocalDate.of(gYear, gMonth, gDay)
+        val hijrahDate = java.time.chrono.HijrahDate.from(localDate)
+        val hDay = hijrahDate.get(java.time.temporal.ChronoField.DAY_OF_MONTH)
+        val hMonth1Based = hijrahDate.get(java.time.temporal.ChronoField.MONTH_OF_YEAR)
+        val hYear = hijrahDate.get(java.time.temporal.ChronoField.YEAR)
+        val hMonthIndex = (hMonth1Based - 1).coerceIn(0, 11)
+
+        return HijriDate(
+          day = hDay,
+          monthIndex = hMonthIndex,
+          monthNameEn = hijriMonthsEn[hMonthIndex],
+          monthNameBn = hijriMonthsBn[hMonthIndex],
+          monthNameAr = hijriMonthsAr[hMonthIndex],
+          year = hYear
+        )
+      } catch (e: Exception) {
+        // Fallback to high-precision astronomical algorithm
+      }
+    }
+
+    // High-precision astronomical Umm al-Qura calculation algorithm
+    var m = gMonth
+    var y = gYear
     if (m < 3) {
       y -= 1
       m += 12
@@ -66,28 +91,27 @@ object IslamicDateHelper {
 
     val a = floor(y / 100.0)
     val b = 2 - a + floor(a / 4.0)
-    val jd = floor(365.25 * (y + 4716)) + floor(30.6001 * (m + 1)) + day + b - 1524.5
+    val jd = floor(365.25 * (y + 4716)) + floor(30.6001 * (m + 1)) + gDay + b - 1524.5
 
-    // Epoch of the Hijri calendar is JD 1948439.5
-    val z = jd - 1948439.5
-    val cyc = floor(z / 10631.0)
-    val rem = z - cyc * 10631.0
-    val j = floor((rem + 0.5) / 354.36667)
-    val iy = 30 * cyc + j
-    val dInYear = rem - floor(j * 354.36667)
-    var hMonth = floor((dInYear + 28.5) / 29.5).toInt()
-    if (hMonth > 11) hMonth = 11
-    if (hMonth < 0) hMonth = 0
+    var l = jd - 1948440 + 10632
+    val n = floor((l - 1) / 10631)
+    l = l - 10631 * n + 354
+    val j = floor((10985 - l) / 5316) * floor((50 * l) / 17719) + floor(l / 5670) * floor((43 * l) / 15238)
+    l = l - floor((30 - j) / 15) * floor((17719 * j) / 50) - floor(j / 16) * floor((15238 * j) / 43) + 29
+    var hMonth = floor((24 * l) / 709).toInt()
+    val hDay = (l - floor((709 * hMonth) / 24)).toInt().coerceIn(1, 30)
+    val hYear = (30 * n + j - 30).toInt()
 
-    val hDay = (dInYear - floor(hMonth * 29.5) + 1).toInt().coerceIn(1, 30)
-    val hYear = iy.toInt() + 1
+    if (hMonth > 12) hMonth = 12
+    if (hMonth < 1) hMonth = 1
+    val hMonthIndex = (hMonth - 1).coerceIn(0, 11)
 
     return HijriDate(
       day = hDay,
-      monthIndex = hMonth,
-      monthNameEn = hijriMonthsEn[hMonth],
-      monthNameBn = hijriMonthsBn[hMonth],
-      monthNameAr = hijriMonthsAr[hMonth],
+      monthIndex = hMonthIndex,
+      monthNameEn = hijriMonthsEn[hMonthIndex],
+      monthNameBn = hijriMonthsBn[hMonthIndex],
+      monthNameAr = hijriMonthsAr[hMonthIndex],
       year = hYear
     )
   }
@@ -124,6 +148,70 @@ object IslamicDateHelper {
         Pair(gregDate, hijriDate)
       }
     }
+  }
+
+  /**
+   * International Gregorian English Date (e.g., "Thursday, 22 October 2026")
+   */
+  fun getEnglishIntlDate(calendar: Calendar = Calendar.getInstance()): String {
+    val sdf = SimpleDateFormat("EEEE, d MMMM yyyy", Locale.ENGLISH)
+    return sdf.format(calendar.time)
+  }
+
+  /**
+   * Bengali Solar Calendar (বঙ্গাব্দ) calculation according to Bangla Academy standard
+   */
+  fun getBanglaSolarDate(calendar: Calendar = Calendar.getInstance()): String {
+    val gYear = calendar.get(Calendar.YEAR)
+    val gMonth = calendar.get(Calendar.MONTH) // 0-based: 0=Jan, 3=Apr
+    val gDay = calendar.get(Calendar.DAY_OF_MONTH)
+
+    val banglaMonths = listOf(
+      "বৈশাখ", "জ্যৈষ্ঠ", "আষাঢ়", "শ্রাবণ", "ভাদ্র", "আশ্বিন",
+      "কার্তিক", "অগ্রহায়ণ", "পৌষ", "মাঘ", "ফাল্গুন", "চৈত্র"
+    )
+
+    val isLeapYear = (gYear % 4 == 0 && gYear % 100 != 0) || (gYear % 400 == 0)
+    val falgunDays = if (isLeapYear) 30 else 29
+    val monthLengths = listOf(31, 31, 31, 31, 31, 31, 30, 30, 30, 30, falgunDays, 30)
+
+    val bYear = if (gMonth > 3 || (gMonth == 3 && gDay >= 14)) gYear - 593 else gYear - 594
+
+    val apr14 = Calendar.getInstance().apply {
+      set(gYear, Calendar.APRIL, 14, 0, 0, 0)
+      set(Calendar.MILLISECOND, 0)
+    }
+
+    val currentCal = Calendar.getInstance().apply {
+      time = calendar.time
+      set(Calendar.HOUR_OF_DAY, 0)
+      set(Calendar.MINUTE, 0)
+      set(Calendar.SECOND, 0)
+      set(Calendar.MILLISECOND, 0)
+    }
+
+    val diffDays = if (currentCal.before(apr14)) {
+      val prevApr14 = Calendar.getInstance().apply {
+        set(gYear - 1, Calendar.APRIL, 14, 0, 0, 0)
+        set(Calendar.MILLISECOND, 0)
+      }
+      ((currentCal.timeInMillis - prevApr14.timeInMillis) / (1000 * 60 * 60 * 24)).toInt()
+    } else {
+      ((currentCal.timeInMillis - apr14.timeInMillis) / (1000 * 60 * 60 * 24)).toInt()
+    }
+
+    var remaining = diffDays
+    var bMonthIdx = 0
+    for (i in monthLengths.indices) {
+      if (remaining < monthLengths[i]) {
+        bMonthIdx = i
+        break
+      }
+      remaining -= monthLengths[i]
+    }
+    val bDay = remaining + 1
+
+    return "${toBengaliDigits(bDay)} ${banglaMonths[bMonthIdx]} ${toBengaliDigits(bYear)} বঙ্গাব্দ"
   }
 
   /**

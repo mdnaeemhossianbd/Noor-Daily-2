@@ -106,6 +106,9 @@ fun HomeScreen(
   val (gregFormatted, hijriFormatted) = remember(currentLang) {
     IslamicDateHelper.getFormattedDates(currentLang)
   }
+  val banglaSolarDate = remember {
+    IslamicDateHelper.getBanglaSolarDate()
+  }
 
   // Notification Permission State
   var hasNotificationPermission by remember {
@@ -401,7 +404,7 @@ fun HomeScreen(
             modifier = Modifier.padding(vertical = 12.dp)
           )
 
-          // Row 2: Live Clock Time & Gregorian Date
+          // Row 2: Live Clock Time & Status Badge
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -423,17 +426,65 @@ fun HomeScreen(
               )
             }
 
-            Text(
-              text = gregFormatted,
-              fontSize = 12.sp,
-              fontWeight = FontWeight.Medium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Surface(
+              shape = RoundedCornerShape(6.dp),
+              color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+            ) {
+              Text(
+                text = when (currentLang) { "bn" -> "লাইভ ঘড়ি"; "ar" -> "مباشر"; else -> "Live Clock" },
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+              )
+            }
           }
 
-          Spacer(modifier = Modifier.height(8.dp))
+          Spacer(modifier = Modifier.height(10.dp))
 
-          // Row 3: Arabic (Hijri) Date & Islamic Month
+          // 1. হিজরির উপরে: ইংরেজি ক্যালেন্ডার (English Calendar Bar - styled like Hijri)
+          Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  Icons.Default.Today,
+                  contentDescription = null,
+                  tint = MaterialTheme.colorScheme.primary,
+                  modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  text = when (currentLang) {
+                    "bn" -> "ইংরেজি ক্যালেন্ডার:"
+                    "ar" -> "التقويم الميلادي:"
+                    else -> "English Calendar:"
+                  },
+                  fontSize = 11.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.primary
+                )
+              }
+              Text(
+                text = gregFormatted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+              )
+            }
+          }
+
+          Spacer(modifier = Modifier.height(6.dp))
+
+          // 2. মাঝে: হিজরি ক্যালেন্ডার (Hijri Calendar Bar)
           Surface(
             shape = RoundedCornerShape(10.dp),
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
@@ -470,6 +521,45 @@ fun HomeScreen(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary
               )
+            }
+          }
+
+          if (currentLang == "bn") {
+            Spacer(modifier = Modifier.height(6.dp))
+            // ৩. বাংলা ক্যালেন্ডার (বঙ্গাব্দ)
+            Surface(
+              shape = RoundedCornerShape(10.dp),
+              color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f),
+              border = BorderStroke(0.8.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Row(
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(
+                    Icons.Default.DateRange,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary,
+                    modifier = Modifier.size(15.dp)
+                  )
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    text = "বাংলা ক্যালেন্ডার (বঙ্গাব্দ):",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary
+                  )
+                }
+                Text(
+                  text = banglaSolarDate,
+                  fontSize = 12.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = MaterialTheme.colorScheme.onSurface
+                )
+              }
             }
           }
         }
