@@ -36,6 +36,18 @@ object PrayerAlarmScheduler {
       }
 
       val isHanafi = prefs.getBoolean("is_hanafi_madhhab", true)
+      PrayerTimeCalculator.updateAdminSettings(
+        method = prefs.getString("prayer_method", "Umm al-Qura") ?: "Umm al-Qura",
+        madhhab = prefs.getString("prayer_madhhab", "Hanafi") ?: "Hanafi",
+        adjustments = mapOf(
+          "fajr" to prefs.getInt("prayer_adjust_fajr", 0),
+          "sunrise" to prefs.getInt("prayer_adjust_sunrise", 0),
+          "dhuhr" to prefs.getInt("prayer_adjust_dhuhr", 0),
+          "asr" to prefs.getInt("prayer_adjust_asr", 0),
+          "maghrib" to prefs.getInt("prayer_adjust_maghrib", 0),
+          "isha" to prefs.getInt("prayer_adjust_isha", 0)
+        )
+      )
       val useGpsLocation = prefs.getBoolean("use_gps_location", true)
       val location = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
       val latitude = if (!useGpsLocation) {
