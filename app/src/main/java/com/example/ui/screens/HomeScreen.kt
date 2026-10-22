@@ -1486,11 +1486,11 @@ fun HomeScreen(
 
   // Active Dialogs for Tasbih, 99 Names, Calendar
   if (showTasbihDialog) {
-    TasbihDialog(onDismiss = { showTasbihDialog = false })
+    TasbihDialog(currentLang = currentLang, onDismiss = { showTasbihDialog = false })
   }
 
   if (showNamesOfAllahDialog) {
-    NamesOfAllahDialog(onDismiss = { showNamesOfAllahDialog = false })
+    NamesOfAllahDialog(currentLang = currentLang, onDismiss = { showNamesOfAllahDialog = false })
   }
 
   if (showIslamicCalendarDialog) {
