@@ -36,14 +36,25 @@ object PrayerAlarmScheduler {
       }
 
       val isHanafi = prefs.getBoolean("is_hanafi_madhhab", true)
+      val useGpsLocation = prefs.getBoolean("use_gps_location", true)
       val location = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
-      val latitude = prefs.getString("gps_latitude", null)?.toDoubleOrNull() ?: location.latitude
-      val longitude = prefs.getString("gps_longitude", null)?.toDoubleOrNull() ?: location.longitude
+      val latitude = if (!useGpsLocation) {
+        prefs.getString("selected_city_latitude", null)?.toDoubleOrNull() ?: location.latitude
+      } else {
+        prefs.getString("gps_latitude", null)?.toDoubleOrNull() ?: location.latitude
+      }
+      val longitude = if (!useGpsLocation) {
+        prefs.getString("selected_city_longitude", null)?.toDoubleOrNull() ?: location.longitude
+      } else {
+        prefs.getString("gps_longitude", null)?.toDoubleOrNull() ?: location.longitude
+      }
+      val timeZoneId = if (!useGpsLocation) prefs.getString("selected_city_timezone", null) else null
       val nextTarget = PrayerTimeCalculator.getNextPrayerAlarmTarget(
         latitude = latitude,
         longitude = longitude,
         isHanafi = isHanafi,
-        enabledPrayers = enabledPrayers
+        enabledPrayers = enabledPrayers,
+        timeZoneId = timeZoneId
       )
 
       val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
