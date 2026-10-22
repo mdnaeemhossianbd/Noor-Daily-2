@@ -366,22 +366,20 @@ export const PostsManager: React.FC = () => {
         updatedAt: Date.now()
       };
 
-      // 1. Immediately update local state & localStorage
-      setPosts(prev => {
-        const exists = prev.some(p => p.id === postId);
-        const updated = exists 
-          ? prev.map(p => p.id === postId ? payload : p)
-          : [payload, ...prev];
-        localStorage.setItem('noor_posts', JSON.stringify(updated));
-        return updated;
-      });
-
-      setIsModalOpen(false);
-      setSubmitting(false);
-
-      // 2. Write to Firebase Realtime Database
+      // Save to the cloud first. Do not show a false success or close the form on failure.
       try {
         await set(ref(db, `posts/${postId}`), payload);
+
+        setPosts(prev => {
+          const exists = prev.some(p => p.id === postId);
+          const updated = exists
+            ? prev.map(p => p.id === postId ? payload : p)
+            : [payload, ...prev];
+          localStorage.setItem('noor_posts', JSON.stringify(updated));
+          return updated;
+        });
+
+        setIsModalOpen(false);
         setSyncSuccessMsg(editingPost ? 'পোস্টটি সফলভাবে ক্লাউড ডাটাবেসে আপডেট হয়েছে!' : 'নতুন পোস্ট সফলভাবে Firebase ক্লাউড ডাটাবেসে সেভ ও পাবলিশ হয়েছে!');
         setTimeout(() => setSyncSuccessMsg(null), 5000);
 
@@ -392,10 +390,12 @@ export const PostsManager: React.FC = () => {
       } catch (dbErr: any) {
         console.error('Database write error:', dbErr);
         if (dbErr.code === 'PERMISSION_DENIED' || dbErr.message?.includes('PERMISSION_DENIED')) {
-          setErrorMessage('পোস্টটি ব্রাউজারে সংরক্ষিত হয়েছে, কিন্তু Firebase Rules-এর কারণে ক্লাউডে রাইট হয়নি (PERMISSION_DENIED)। অনুগ্রহ করে Firebase Console -> Realtime Database Rules-এ habitsk50@gmail.com অনুমতি দিয়ে Publish করুন।');
+          setErrorMessage('Firebase Rules অনুমতি দেয়নি (PERMISSION_DENIED)। পোস্টটি ক্লাউডে সেভ হয়নি। Firebase Console → Realtime Database → Rules-এ habitsk50@gmail.com-এর admin write rule যোগ করে Publish করুন।');
         } else {
           setErrorMessage('ডাটাবেসে সেভ করতে সমস্যা হয়েছে: ' + (dbErr.message || 'ত্রুটি'));
         }
+      } finally {
+        setSubmitting(false);
       }
     } catch (err: any) {
       console.error('Error saving post:', err);
