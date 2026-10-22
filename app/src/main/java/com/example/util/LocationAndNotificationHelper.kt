@@ -13,6 +13,7 @@ import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
+import android.os.Looper
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
@@ -197,6 +198,47 @@ object LocationAndNotificationHelper {
     )
   }
 
+  /**
+   * Request a fresh device location after using the last-known location for immediate UI.
+   * The callback can be invoked more than once when multiple providers return a fix.
+   */
+  @Suppress("DEPRECATION")
+  fun requestFreshDeviceLocation(context: Context, onLocation: (UserLocationInfo) -> Unit) {
+    val hasFine = ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val hasCoarse = ActivityCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    if (!hasFine && !hasCoarse) return
+
+    val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return
+    val providers = listOf(LocationManager.NETWORK_PROVIDER, LocationManager.GPS_PROVIDER)
+    for (provider in providers) {
+      try {
+        if (!lm.isProviderEnabled(provider)) continue
+        lm.requestSingleUpdate(provider, object : android.location.LocationListener {
+          override fun onLocationChanged(location: Location) {
+            val addressText = geocodeLocation(context, location.latitude, location.longitude)
+            onLocation(
+              UserLocationInfo(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                addressName = addressText,
+                isAutoDetected = true
+              )
+            )
+          }
+
+          override fun onProviderEnabled(provider: String) = Unit
+          override fun onProviderDisabled(provider: String) = Unit
+          @Deprecated("Deprecated in Android")
+          override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) = Unit
+        }, Looper.getMainLooper())
+      } catch (_: SecurityException) {
+        // Permission may have changed while requesting the update.
+      } catch (_: IllegalArgumentException) {
+        // Provider is unavailable on this device.
+      }
+    }
+  }
+
   data class KnownCity(
     val nameBn: String,
     val nameEn: String,
@@ -334,18 +376,42 @@ object LocationAndNotificationHelper {
       }
     }
 
-    if (closestCity != null) {
-      val isBn = Locale.getDefault().language == "bn"
+    val isBn = Locale.getDefault().language == "bn"
+    if (closestCity != null && minDistance <= 40.0) {
       val cityName = if (isBn) closestCity.nameBn else closestCity.nameEn
       val regionName = if (isBn) closestCity.divisionBn else "Bangladesh"
-      return if (minDistance <= 40.0) {
-        "$cityName, $regionName"
-      } else {
-        "$cityName, বাংলাদেশ"
+      return "$cityName, $regionName"
+    }
+
+    // Saudi city fallback prevents a failed geocoder from incorrectly labeling Saudi Arabia as Bangladesh.
+    val saudiCities = listOf(
+      Triple("الطائف", "Taif", 21.2703 to 40.4158),
+      Triple("مكة المكرمة", "Makkah", 21.3891 to 39.8579),
+      Triple("جدة", "Jeddah", 21.4858 to 39.1925),
+      Triple("الرياض", "Riyadh", 24.7136 to 46.6753),
+      Triple("المدينة المنورة", "Madinah", 24.5247 to 39.5692),
+      Triple("الدمام", "Dammam", 26.4207 to 50.0888)
+    )
+    val nearestSaudi = saudiCities.minByOrNull { (_, _, coords) ->
+      calculateDistanceKm(lat, lon, coords.first, coords.second)
+    }
+    if (nearestSaudi != null) {
+      val distance = calculateDistanceKm(lat, lon, nearestSaudi.third.first, nearestSaudi.third.second)
+      if (distance <= 100.0) {
+        val cityName = if (isBn) when (nearestSaudi.second) {
+          "Taif" -> "তায়েফ"
+          "Makkah" -> "মক্কা"
+          "Jeddah" -> "জেদ্দা"
+          "Riyadh" -> "রিয়াদ"
+          "Madinah" -> "মদিনা"
+          else -> "দাম্মাম"
+        } else nearestSaudi.second
+        val countryName = if (isBn) "সৌদি আরব" else "Saudi Arabia"
+        return "$cityName, $countryName"
       }
     }
 
-    // 3. Fallback: Friendly city & country name, strictly avoiding numbers
-    return "ঢাকা, বাংলাদেশ"
+    // Never claim that a location outside Bangladesh is in Bangladesh when reverse geocoding fails.
+    return if (isBn) "GPS অবস্থান" else "GPS location"
   }
 }
