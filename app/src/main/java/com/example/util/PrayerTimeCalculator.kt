@@ -13,13 +13,21 @@ object PrayerTimeCalculator {
   @Volatile private var configuredMethod: String = "Umm al-Qura"
   @Volatile private var configuredMadhhab: String? = null
   @Volatile private var configuredAdjustments: Map<String, Int> = emptyMap()
+  @Volatile private var _settingsRevision: Int = 0
+  val settingsRevision: Int get() = _settingsRevision
 
   /** Updated from the public-read /prayer_settings RTDB node by the existing background sync. */
   fun updateAdminSettings(method: String, madhhab: String, adjustments: Map<String, Int>) {
     val supportedMethods = setOf("Umm al-Qura", "Muslim World League", "Egyptian", "Karachi", "ISNA")
-    configuredMethod = method.takeIf { it in supportedMethods } ?: "Umm al-Qura"
-    configuredMadhhab = madhhab.takeIf { it == "Hanafi" || it == "Shafi" }
-    configuredAdjustments = adjustments.mapValues { (_, value) -> value.coerceIn(-30, 30) }
+    val nextMethod = method.takeIf { it in supportedMethods } ?: "Umm al-Qura"
+    val nextMadhhab = madhhab.takeIf { it == "Hanafi" || it == "Shafi" }
+    val nextAdjustments = adjustments.mapValues { (_, value) -> value.coerceIn(-30, 30) }
+    if (configuredMethod != nextMethod || configuredMadhhab != nextMadhhab || configuredAdjustments != nextAdjustments) {
+      configuredMethod = nextMethod
+      configuredMadhhab = nextMadhhab
+      configuredAdjustments = nextAdjustments
+      _settingsRevision += 1
+    }
   }
 
   private fun adjustmentMinutes(prayer: String): Int = configuredAdjustments[prayer] ?: 0
@@ -85,7 +93,8 @@ object PrayerTimeCalculator {
       else -> 18.0
     }
     val ishaAngle = when (method) {
-      "Muslim World League", "Egyptian" -> 17.0
+      "Muslim World League" -> 17.0
+      "Egyptian" -> 17.5
       "ISNA" -> 15.0
       else -> 18.0
     }
