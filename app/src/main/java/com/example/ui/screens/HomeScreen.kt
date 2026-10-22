@@ -159,6 +159,7 @@ fun HomeScreen(
     if (hasLocationPermission) {
       LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
         userLocationInfo = freshLocation
+        com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
       }
     }
   }
@@ -387,6 +388,7 @@ fun HomeScreen(
                     userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
                     LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
                       userLocationInfo = freshLocation
+                      com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
                     }
                   }
                 },
@@ -1495,6 +1497,7 @@ fun HomeScreen(
         if (hasLocationPermission) {
           LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
             userLocationInfo = freshLocation
+            com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
           }
         }
       },
