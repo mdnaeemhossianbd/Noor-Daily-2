@@ -150,6 +150,15 @@ fun HomeScreen(
     }
   }
 
+  // Refresh location on screen entry whenever permission is already granted.
+  LaunchedEffect(hasLocationPermission) {
+    if (hasLocationPermission) {
+      LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+        userLocationInfo = freshLocation
+      }
+    }
+  }
+
   // Azan Reminder Alert State
   var isAzanPlaying by remember { mutableStateOf(false) }
   var azanSecondsLeft by remember { mutableIntStateOf(20) }
