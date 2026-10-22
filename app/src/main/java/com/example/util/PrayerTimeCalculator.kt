@@ -10,6 +10,20 @@ import kotlin.math.*
  */
 object PrayerTimeCalculator {
 
+  @Volatile private var configuredMethod: String = "Umm al-Qura"
+  @Volatile private var configuredMadhhab: String? = null
+  @Volatile private var configuredAdjustments: Map<String, Int> = emptyMap()
+
+  /** Updated from the public-read /prayer_settings RTDB node by the existing background sync. */
+  fun updateAdminSettings(method: String, madhhab: String, adjustments: Map<String, Int>) {
+    val supportedMethods = setOf("Umm al-Qura", "Muslim World League", "Egyptian", "Karachi", "ISNA")
+    configuredMethod = method.takeIf { it in supportedMethods } ?: "Umm al-Qura"
+    configuredMadhhab = madhhab.takeIf { it == "Hanafi" || it == "Shafi" }
+    configuredAdjustments = adjustments.mapValues { (_, value) -> value.coerceIn(-30, 30) }
+  }
+
+  private fun adjustmentMinutes(prayer: String): Int = configuredAdjustments[prayer] ?: 0
+
   data class CalculatedPrayerTimes(
     val fajr: String,
     val sunrise: String,
@@ -64,35 +78,45 @@ object PrayerTimeCalculator {
       return Math.toDegrees(acos(clampedCosH)) / 15.0
     }
 
-    // Fajr (18° below horizon)
-    val fajrHA = hourAngle(-18.0)
-    val fajrHour = solarNoon - fajrHA
+    val method = configuredMethod
+    val fajrAngle = when (method) {
+      "Egyptian" -> 19.5
+      "ISNA" -> 15.0
+      else -> 18.0
+    }
+    val ishaAngle = when (method) {
+      "Muslim World League", "Egyptian" -> 17.0
+      "ISNA" -> 15.0
+      else -> 18.0
+    }
 
-    // Sehri end time: 4 minutes cautionary buffer before Fajr / Subh Sadiq
+    // Calculation-method angles, followed by the admin's explicit minute adjustments.
+    val fajrHour = solarNoon - hourAngle(-fajrAngle) + adjustmentMinutes("fajr") / 60.0
+    // Sehri end time: 4-minute cautionary buffer before adjusted Fajr.
     val sehriHour = fajrHour - (4.0 / 60.0)
 
-    // Sunrise (0.833° below horizon for atmospheric refraction)
     val sunriseHA = hourAngle(-0.833)
-    val sunriseHour = solarNoon - sunriseHA
+    val sunriseHour = solarNoon - sunriseHA + adjustmentMinutes("sunrise") / 60.0
+    val dhuhrHour = solarNoon + (2.0 / 60.0) + adjustmentMinutes("dhuhr") / 60.0
 
-    // Dhuhr (Solar noon + 2-3 mins buffer)
-    val dhuhrHour = solarNoon + (2.0 / 60.0)
-
-    // Asr: shadow length = (factor + tan|lat - decl|)
-    val asrFactor = if (isHanafi) 2.0 else 1.0
+    // Admin-configured madhhab overrides the screen's default only after settings are loaded.
+    val effectiveHanafi = configuredMadhhab?.let { it == "Hanafi" } ?: isHanafi
+    val asrFactor = if (effectiveHanafi) 2.0 else 1.0
     val asrAltRad = atan(1.0 / (asrFactor + tan(abs(latRad - declination))))
     val asrAltDeg = Math.toDegrees(asrAltRad)
     val asrHA = hourAngle(asrAltDeg)
-    val asrHour = solarNoon + asrHA
+    val asrHour = solarNoon + asrHA + adjustmentMinutes("asr") / 60.0
 
-    // Maghrib (Sunset: 0.833° below horizon) = Iftar time
     val maghribHA = sunriseHA
-    val maghribHour = solarNoon + maghribHA
+    val maghribHour = solarNoon + maghribHA + adjustmentMinutes("maghrib") / 60.0
     val iftarHour = maghribHour
 
-    // Isha (18° below horizon)
-    val ishaHA = hourAngle(-18.0)
-    val ishaHour = solarNoon + ishaHA
+    // Umm al-Qura convention uses a fixed interval after sunset (normally 90 minutes).
+    val ishaHour = if (method == "Umm al-Qura") {
+      maghribHour + 90.0 / 60.0 + adjustmentMinutes("isha") / 60.0
+    } else {
+      solarNoon + hourAngle(-ishaAngle) + adjustmentMinutes("isha") / 60.0
+    }
 
     fun formatHour(hourDec: Double): String {
       var norm = hourDec
