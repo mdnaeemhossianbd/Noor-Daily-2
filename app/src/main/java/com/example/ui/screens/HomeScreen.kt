@@ -639,7 +639,11 @@ fun HomeScreen(
               color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
             ) {
               Text(
-                text = "বাকি: $sehriRemainingFormatted",
+                text = when (currentLang) {
+                  "bn" -> "বাকি: $sehriRemainingFormatted"
+                  "ar" -> "متبقي: $sehriRemainingFormatted"
+                  else -> "Remaining: $sehriRemainingFormatted"
+                },
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
@@ -690,7 +694,11 @@ fun HomeScreen(
               color = IslamicGoldAccent.copy(alpha = 0.2f)
             ) {
               Text(
-                text = "বাকি: $iftarRemainingFormatted",
+                text = when (currentLang) {
+                  "bn" -> "বাকি: $iftarRemainingFormatted"
+                  "ar" -> "متبقي: $iftarRemainingFormatted"
+                  else -> "Remaining: $iftarRemainingFormatted"
+                },
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary,
@@ -795,13 +803,21 @@ fun HomeScreen(
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
               Text(
-                text = "الله أكبر، الله أكبر • নামাজের ওয়াক্ত হয়েছে",
+                text = when (currentLang) {
+                  "bn" -> "আল্লাহু আকবার • নামাজের ওয়াক্ত হয়েছে"
+                  "ar" -> "الله أكبر • دخل وقت الصلاة"
+                  else -> "Allahu Akbar • Prayer time has arrived"
+                },
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp
               )
               Text(
-                text = "আযান বাজছে... আর $azanSecondsLeft সেকেন্ড বাকি",
+                text = when (currentLang) {
+                  "bn" -> "আযান বাজছে... আর $azanSecondsLeft সেকেন্ড বাকি"
+                  "ar" -> "الأذان يعمل... متبقي $azanSecondsLeft ثانية"
+                  else -> "Azan playing... $azanSecondsLeft seconds remaining"
+                },
                 color = IslamicGoldLight,
                 fontSize = 12.sp
               )
