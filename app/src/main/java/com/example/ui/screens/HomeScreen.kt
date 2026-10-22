@@ -79,6 +79,22 @@ fun HomeScreen(
   // Keep the same GPS/manual city choice across Home, Prayer Times, and app restarts.
   val locationPrefs = remember { context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE) }
   var isUsingGps by remember { mutableStateOf(locationPrefs.getBoolean("use_gps_location", true)) }
+  val prayerAlarmPrefs = remember { context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE) }
+  var masterAzanEnabled by remember { mutableStateOf(prayerAlarmPrefs.getBoolean("azan_notifications_enabled", true)) }
+  val prayerAzanToggles = remember {
+    androidx.compose.runtime.mutableStateMapOf(
+      "Fajr" to prayerAlarmPrefs.getBoolean("azan_fajr_enabled", true),
+      "Dhuhr" to prayerAlarmPrefs.getBoolean("azan_dhuhr_enabled", true),
+      "Asr" to prayerAlarmPrefs.getBoolean("azan_asr_enabled", true),
+      "Maghrib" to prayerAlarmPrefs.getBoolean("azan_maghrib_enabled", true),
+      "Isha" to prayerAlarmPrefs.getBoolean("azan_isha_enabled", true)
+    )
+  }
+  fun updatePrayerAzan(key: String, enabled: Boolean) {
+    prayerAzanToggles[key] = enabled
+    prayerAlarmPrefs.edit().putBoolean("azan_${key.lowercase()}_enabled", enabled).apply()
+    com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+  }
   var currentSelectedCity by remember { mutableStateOf(selectedCity) }
 
   // Dynamic Location State
@@ -155,7 +171,7 @@ fun HomeScreen(
   }
 
   // Refresh location on screen entry whenever permission is already granted.
-  LaunchedEffect(hasLocationPermission) {
+  LaunchedEffect(hasLocationPermission, currentLang) {
     if (hasLocationPermission) {
       LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
         userLocationInfo = freshLocation
@@ -824,6 +840,75 @@ fun HomeScreen(
             }
             IconButton(onClick = { isAzanPlaying = false }) {
               Icon(Icons.Default.Close, contentDescription = "Stop", tint = Color.White)
+            }
+          }
+        }
+      }
+    }
+
+    // Quick Azan controls: same persisted preferences as Settings.
+    item {
+      Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+      ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+          ) {
+            Column(modifier = Modifier.weight(1f)) {
+              Text(
+                text = when (currentLang) { "bn" -> "নামাজের আযান"; "ar" -> "أذان الصلاة"; else -> "Prayer Azan" },
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+              )
+              Text(
+                text = when (currentLang) { "bn" -> "প্রতি ওয়াক্তের অ্যালার্ট আলাদাভাবে চালু/বন্ধ করুন"; "ar" -> "تشغيل تنبيه كل صلاة بشكل مستقل"; else -> "Toggle each prayer alert separately" },
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+              )
+            }
+            Switch(
+              checked = masterAzanEnabled,
+              onCheckedChange = { enabled ->
+                masterAzanEnabled = enabled
+                prayerAlarmPrefs.edit().putBoolean("azan_notifications_enabled", enabled).apply()
+                if (enabled) com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+                else com.example.util.PrayerAlarmScheduler.cancelAlarms(context)
+              }
+            )
+          }
+          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+          LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            contentPadding = PaddingValues(top = 8.dp)
+          ) {
+            items(listOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")) { prayerKey ->
+              Column(
+                modifier = Modifier.width(58.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+              ) {
+                Text(
+                  text = when (currentLang) {
+                    "bn" -> when (prayerKey) { "Fajr" -> "ফজর"; "Dhuhr" -> "যোহর"; "Asr" -> "আসর"; "Maghrib" -> "মাগরিব"; else -> "এশা" }
+                    "ar" -> when (prayerKey) { "Fajr" -> "الفجر"; "Dhuhr" -> "الظهر"; "Asr" -> "العصر"; "Maghrib" -> "المغرب"; else -> "العشاء" }
+                    else -> prayerKey
+                  },
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.SemiBold,
+                  maxLines = 1
+                )
+                Switch(
+                  checked = masterAzanEnabled && (prayerAzanToggles[prayerKey] ?: true),
+                  enabled = masterAzanEnabled,
+                  onCheckedChange = { updatePrayerAzan(prayerKey, it) }
+                )
+              }
             }
           }
         }
