@@ -57,6 +57,9 @@ fun PrayerTimesScreen(
   val (gregFormatted, hijriFormatted) = remember(currentLang) {
     IslamicDateHelper.getFormattedDates(currentLang)
   }
+  val englishIntlDate = remember(currentLang) {
+    IslamicDateHelper.getEnglishIntlDate()
+  }
   val banglaSolarDate = remember {
     IslamicDateHelper.getBanglaSolarDate()
   }
