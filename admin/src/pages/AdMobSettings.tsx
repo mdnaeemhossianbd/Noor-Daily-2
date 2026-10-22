@@ -85,7 +85,7 @@ export const AdMobSettings: React.FC = () => {
       {savedSuccess && (
         <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-300 text-sm">
           <CheckCircle2 className="w-5 h-5 shrink-0" />
-          <span>Settings saved and published live to Cloud Firestore!</span>
+          <span>Settings saved to Firebase Realtime Database.</span>
         </div>
       )}
 
