@@ -67,7 +67,13 @@ class MainActivity : ComponentActivity() {
         appPreferences.edit().putString("app_language", language).apply()
       }
       var currentTab by remember { mutableStateOf(NoorTab.HOME) }
-      var selectedCity by remember { mutableStateOf(SampleIslamicData.cities.first()) }
+      var selectedCity by remember {
+        val savedCityName = appPreferences.getString("selected_city_name_en", null)
+        mutableStateOf(
+          SampleIslamicData.cities.firstOrNull { it.nameEn == savedCityName }
+            ?: SampleIslamicData.cities.first()
+        )
+      }
       var isHanafi by remember { mutableStateOf(true) }
       val bookmarkedIds = remember { mutableStateListOf("post_ayat_today", "post_tahajjud") }
       var activePost by remember { mutableStateOf<IslamicPost?>(null) }
