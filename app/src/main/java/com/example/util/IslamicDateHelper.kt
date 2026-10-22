@@ -81,7 +81,8 @@ object IslamicDateHelper {
       }
     }
 
-    // High-precision astronomical Umm al-Qura calculation algorithm
+    // Compatibility fallback for Android 7.x (API 24–25): this is a tabular/civil Hijri
+    // approximation, not an official Umm al-Qura table, so it can differ by a day in Saudi Arabia.
     var m = gMonth
     var y = gYear
     if (m < 3) {
