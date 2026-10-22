@@ -216,6 +216,11 @@ object LocationAndNotificationHelper {
         lm.requestSingleUpdate(provider, object : android.location.LocationListener {
           override fun onLocationChanged(location: Location) {
             val addressText = geocodeLocation(context, location.latitude, location.longitude)
+            context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE).edit()
+              .putString("gps_latitude", location.latitude.toString())
+              .putString("gps_longitude", location.longitude.toString())
+              .putString("gps_address_name", addressText)
+              .apply()
             onLocation(
               UserLocationInfo(
                 latitude = location.latitude,
