@@ -177,7 +177,8 @@ fun PrayerTimesScreen(
       if (secondsRemaining > 0) {
         secondsRemaining--
       } else {
-        isAzanPlaying = true
+        // Background AlarmManager/foreground-service scheduling is the single playback source.
+        // Do not start a second in-screen player at the same prayer time.
         prayerCalculation = PrayerTimeCalculator.calculate(
           latitude = activeLat,
           longitude = activeLng,
