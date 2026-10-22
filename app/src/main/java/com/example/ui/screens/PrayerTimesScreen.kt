@@ -244,7 +244,15 @@ fun PrayerTimesScreen(
         ) {
           Icon(Icons.Default.VolumeUp, contentDescription = null, modifier = Modifier.size(16.dp))
           Spacer(modifier = Modifier.width(4.dp))
-          Text("আযান টেস্ট", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+          Text(
+            when (currentLang) {
+              "ar" -> "اختبار الأذان"
+              "en" -> "Test Azan"
+              else -> "আযান টেস্ট"
+            },
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+          )
         }
       }
     }
@@ -276,13 +284,21 @@ fun PrayerTimesScreen(
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
               Text(
-                text = "নামাজের ওয়াক্ত হয়েছে • আযান বাজছে",
+                text = when (currentLang) {
+                  "ar" -> "دخل وقت الصلاة • الأذان يعمل"
+                  "en" -> "Prayer time has arrived • Azan playing"
+                  else -> "নামাজের ওয়াক্ত হয়েছে • আযান বাজছে"
+                },
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp
               )
               Text(
-                text = "আর $azanSecondsLeft সেকেন্ড বাকি (সাউন্ড ও ভাইব্রেশন চলছে)",
+                text = when (currentLang) {
+                  "ar" -> "متبقي $azanSecondsLeft ثانية (الصوت والاهتزاز يعملان)"
+                  "en" -> "$azanSecondsLeft seconds remaining (sound and vibration active)"
+                  else -> "আর $azanSecondsLeft সেকেন্ড বাকি (সাউন্ড ও ভাইব্রেশন চলছে)"
+                },
                 color = IslamicGoldLight,
                 fontSize = 12.sp
               )
