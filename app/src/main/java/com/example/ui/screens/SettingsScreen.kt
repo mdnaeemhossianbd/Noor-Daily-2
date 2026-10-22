@@ -369,14 +369,35 @@ fun SettingsScreen(
                         data = Uri.parse("package:${context.packageName}")
                       }
                       try {
-                        exactAlarmPermissionLauncher.launch(requestIntent)
-                      } catch (_: Exception) {
-                        exactAlarmPermissionLauncher.launch(
-                          Intent(
-                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.parse("package:${context.packageName}")
+                        if (requestIntent.resolveActivity(context.packageManager) != null) {
+                          exactAlarmPermissionLauncher.launch(requestIntent)
+                        } else {
+                          exactAlarmPermissionLauncher.launch(
+                            Intent(
+                              android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                              Uri.parse("package:${context.packageName}")
+                            )
                           )
-                        )
+                        }
+                      } catch (_: Exception) {
+                        try {
+                          exactAlarmPermissionLauncher.launch(
+                            Intent(
+                              android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                              Uri.parse("package:${context.packageName}")
+                            )
+                          )
+                        } catch (_: Exception) {
+                          android.widget.Toast.makeText(
+                            context,
+                            when (currentLang) {
+                              "ar" -> "افتح إعدادات التطبيق واسمح بالتنبيهات"
+                              "en" -> "Open App info and allow alarms/notifications if available."
+                              else -> "App info খুলে Alarms/Notifications অনুমতি দিন, যদি অপশন থাকে।"
+                            },
+                            android.widget.Toast.LENGTH_LONG
+                          ).show()
+                        }
                       }
                     },
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)

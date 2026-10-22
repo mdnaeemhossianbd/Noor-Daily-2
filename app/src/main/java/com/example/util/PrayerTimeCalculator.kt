@@ -168,7 +168,8 @@ object PrayerTimeCalculator {
     val iftarTargetMin = if (currentMinutes < iftarM) iftarM else iftarM + 24 * 60
     val remainingSecToIftar = (iftarTargetMin * 60L - currentSeconds).coerceAtLeast(0L)
 
-    // Determine active and next prayer
+    // Determine the currently active obligatory prayer and the next obligatory prayer.
+    // Sunrise is not an obligatory prayer, so it must not replace Dhuhr as the next-prayer countdown.
     var nextNameEn = "Fajr"
     var nextNameBn = "ফজর"
     var nextNameAr = "الفجر"
@@ -181,15 +182,12 @@ object PrayerTimeCalculator {
     when {
       currentMinutes < fajrM -> {
         nextNameEn = "Fajr"; nextNameBn = "ফজর"; nextNameAr = "الفجر"; targetMinute = fajrM
-        activeNameEn = "Tahajjud"; activeNameBn = "তাহাজ্জুদ"; activeNameAr = "التهجد"
-      }
-      currentMinutes < sunriseM -> {
-        nextNameEn = "Sunrise"; nextNameBn = "সূর্যোদয়"; nextNameAr = "الشروق"; targetMinute = sunriseM
-        activeNameEn = "Fajr"; activeNameBn = "ফজর"; activeNameAr = "الفجر"
+        // Before Fajr, the previous obligatory prayer is Isha.
+        activeNameEn = "Isha"; activeNameBn = "এশা"; activeNameAr = "العشاء"
       }
       currentMinutes < dhuhrM -> {
         nextNameEn = "Dhuhr"; nextNameBn = "যোহর"; nextNameAr = "الظهر"; targetMinute = dhuhrM
-        activeNameEn = "Duha/Chasht"; activeNameBn = "চাশত/ইশরাক"; activeNameAr = "الضحى"
+        activeNameEn = "Fajr"; activeNameBn = "ফজর"; activeNameAr = "الفجر"
       }
       currentMinutes < asrM -> {
         nextNameEn = "Asr"; nextNameBn = "আসর"; nextNameAr = "العصر"; targetMinute = asrM
@@ -204,7 +202,7 @@ object PrayerTimeCalculator {
         activeNameEn = "Maghrib"; activeNameBn = "মাগরিব"; activeNameAr = "المغرب"
       }
       else -> {
-        // Next is tomorrow's Fajr
+        // After Isha, next prayer is tomorrow's Fajr.
         nextNameEn = "Fajr"; nextNameBn = "ফজর"; nextNameAr = "الفجر"; targetMinute = fajrM + 24 * 60
         activeNameEn = "Isha"; activeNameBn = "এশা"; activeNameAr = "العشاء"
       }

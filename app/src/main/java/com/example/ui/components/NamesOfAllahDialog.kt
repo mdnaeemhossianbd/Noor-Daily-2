@@ -28,6 +28,35 @@ import com.example.data.AllahName
 import com.example.data.NamesOfAllahData
 import com.example.util.AppStrings
 
+private fun banglaPronunciation(transliteration: String): String {
+  val lower = transliteration.lowercase()
+  val prefix = when {
+    lower.startsWith("ar-") -> "আর-" to "ar-"
+    lower.startsWith("as-") -> "আস-" to "as-"
+    lower.startsWith("ash-") -> "আশ-" to "ash-"
+    lower.startsWith("at-") -> "আত-" to "at-"
+    lower.startsWith("az-") -> "আয-" to "az-"
+    lower.startsWith("ad-") -> "আদ-" to "ad-"
+    lower.startsWith("an-") -> "আন-" to "an-"
+    lower.startsWith("al-") -> "আল-" to "al-"
+    lower.startsWith("ab-") -> "আব-" to "ab-"
+    lower.startsWith("am-") -> "আম-" to "am-"
+    else -> "" to ""
+  }
+  var value = if (prefix.second.isNotEmpty()) prefix.first + lower.removePrefix(prefix.second) else lower
+  val replacements = listOf(
+    "kh" to "খ", "gh" to "গ", "th" to "স", "dh" to "য", "sh" to "শ",
+    "aa" to "া", "ee" to "ী", "oo" to "ূ", "a" to "া", "e" to "ে",
+    "i" to "ি", "o" to "ো", "u" to "ু", "q" to "ক", "k" to "ক",
+    "g" to "গ", "h" to "হ", "j" to "জ", "m" to "ম", "n" to "ন",
+    "r" to "র", "l" to "ল", "b" to "ব", "t" to "ত", "d" to "দ",
+    "s" to "স", "f" to "ফ", "w" to "ও", "y" to "য়", "z" to "য",
+    "p" to "প", "c" to "ক", "'" to "", "-" to "-"
+  )
+  replacements.forEach { (from, to) -> value = value.replace(from, to) }
+  return value.replace(Regex("াা+"), "া").replace(Regex("েে+"), "ে")
+}
+
 @Composable
 fun NamesOfAllahDialog(
   currentLang: String,
@@ -176,12 +205,20 @@ fun NamesOfAllahDialog(
                   Spacer(modifier = Modifier.height(4.dp))
 
                   Text(
-                    text = if (currentLang == "bn") name.meaningBn else name.meaningEn,
+                    text = if (currentLang == "bn") banglaPronunciation(name.transliteration) else name.transliteration,
                     fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center,
                     maxLines = 1
+                  )
+                  Text(
+                    text = if (currentLang == "bn") name.meaningBn else name.meaningEn,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2
                   )
                 }
               }
@@ -214,6 +251,14 @@ fun NamesOfAllahDialog(
               color = MaterialTheme.colorScheme.primary,
               fontWeight = FontWeight.Bold
             )
+            if (currentLang == "bn") {
+              Text(
+                text = "বাংলা উচ্চারণ: ${banglaPronunciation(detail.transliteration)}",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+              )
+            }
             Text(
               text = if (currentLang == "bn") "${AppStrings.text(currentLang, "names.meaning_bn")}: ${detail.meaningBn}" else "${AppStrings.text(currentLang, "names.meaning_en")}: ${detail.meaningEn}",
               fontSize = 14.sp,
