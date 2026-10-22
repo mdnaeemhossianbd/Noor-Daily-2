@@ -89,7 +89,9 @@ class MainActivity : ComponentActivity() {
       LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
           while (isActive) {
-            SampleIslamicData.syncFromFirebase()
+            SampleIslamicData.syncFromFirebase {
+              com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+            }
             delay(5000)
           }
         }
