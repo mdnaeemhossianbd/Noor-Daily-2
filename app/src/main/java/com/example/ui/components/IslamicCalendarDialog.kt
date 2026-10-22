@@ -28,6 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.ui.theme.IslamicEmeraldPrimary
 import com.example.ui.theme.IslamicGoldAccent
 import com.example.util.IslamicDateHelper
+import com.example.util.AppStrings
 import java.util.Calendar
 
 @Composable
@@ -86,7 +87,7 @@ fun IslamicCalendarDialog(
               Spacer(modifier = Modifier.width(8.dp))
               Column {
                 Text(
-                  text = "ইসলামিক হিজরি ক্যালেন্ডার",
+                  text = AppStrings.text(currentLang, "calendar.title"),
                   fontSize = 18.sp,
                   fontWeight = FontWeight.Bold,
                   color = MaterialTheme.colorScheme.primary
@@ -99,7 +100,7 @@ fun IslamicCalendarDialog(
               }
             }
             IconButton(onClick = onDismiss) {
-              Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+              Icon(Icons.Default.Close, contentDescription = AppStrings.text(currentLang, "common.close"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
           }
 
@@ -273,7 +274,7 @@ fun IslamicCalendarDialog(
           Spacer(modifier = Modifier.height(16.dp))
 
           Text(
-            text = "বছরের গুরুত্বপূর্ণ ইসলামিক দিবস ও ফজিলত",
+            text = AppStrings.text(currentLang, "calendar.important_days"),
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
