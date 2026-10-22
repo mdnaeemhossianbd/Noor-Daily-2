@@ -144,6 +144,18 @@ fun HomeScreen(
     hasLocationPermission = granted
     if (granted) {
       userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+      LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+        userLocationInfo = freshLocation
+      }
+    }
+  }
+
+  // Refresh location on screen entry whenever permission is already granted.
+  LaunchedEffect(hasLocationPermission) {
+    if (hasLocationPermission) {
+      LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+        userLocationInfo = freshLocation
+      }
     }
   }
 
@@ -368,6 +380,9 @@ fun HomeScreen(
                     )
                   } else {
                     userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+                    LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+                      userLocationInfo = freshLocation
+                    }
                   }
                 },
                 shape = RoundedCornerShape(12.dp),
@@ -1471,6 +1486,11 @@ fun HomeScreen(
       onSelectGps = {
         isUsingGps = true
         userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+        if (hasLocationPermission) {
+          LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+            userLocationInfo = freshLocation
+          }
+        }
       },
       onSelectCity = { city ->
         isUsingGps = false
