@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   ref, 
   set, 
+  update,
   remove, 
   onValue 
 } from 'firebase/database';
@@ -100,7 +101,7 @@ export const CategoriesManager: React.FC = () => {
         const catId = cat.id || `cat_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         catMap[catId] = { ...cat, id: catId, updatedAt: Date.now() };
       }
-      await set(ref(db, 'categories'), catMap);
+      await update(ref(db, 'categories'), catMap);
       setCategories(Object.values(catMap));
 
       // Seed subcategories
@@ -110,14 +111,21 @@ export const CategoriesManager: React.FC = () => {
         const subId = sub.id || `sub_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
         subMap[subId] = { ...sub, id: subId, updatedAt: Date.now() };
       }
-      await set(ref(db, 'subcategories'), subMap);
+      await update(ref(db, 'subcategories'), subMap);
       setSubcategories(Object.values(subMap));
 
       setSyncToast('সকল ইসলামিক প্রধান ক্যাটাগরি ও উপ-বিভাগ সফলভাবে ফায়ারবেস ক্লাউডে সিঙ্ক হয়েছে!');
       setTimeout(() => setSyncToast(null), 4000);
     } catch (err: any) {
-      console.error('Failed to sync:', err);
-      alert('Error: ' + err.message);
+      console.error('Failed to sync default categories/subcategories:', err);
+      const message = String(err?.message || err);
+      if (message.includes('PERMISSION_DENIED') || message.toLowerCase().includes('permission denied')) {
+        alert(
+          'Firebase permission denied. Admin login email must be habitsk50@gmail.com and the deployed Realtime Database Rules must allow this authenticated email to write /categories and /subcategories. The rules file in GitHub does not automatically update Firebase Console rules.'
+        );
+      } else {
+        alert('ডিফল্ট সিঙ্ক ব্যর্থ হয়েছে: ' + message);
+      }
     } finally {
       setSyncing(false);
     }
