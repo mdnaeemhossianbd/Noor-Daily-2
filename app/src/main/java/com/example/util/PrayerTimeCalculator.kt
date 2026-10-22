@@ -232,31 +232,34 @@ object PrayerTimeCalculator {
   fun getNextPrayerAlarmTarget(
     latitude: Double,
     longitude: Double,
-    isHanafi: Boolean = true
+    isHanafi: Boolean = true,
+    enabledPrayers: Set<String> = setOf("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
   ): PrayerAlarmTarget {
+    require(enabledPrayers.isNotEmpty()) { "At least one prayer reminder must be enabled" }
     val now = Calendar.getInstance()
     val todayTimes = calculate(latitude, longitude, isHanafi, now)
 
-    val prayers = listOf(
-      Triple("Fajr", "ফজর", todayTimes.fajr),
-      Triple("Dhuhr", "যোহর", todayTimes.dhuhr),
-      Triple("Asr", "আসর", todayTimes.asr),
-      Triple("Maghrib", "মাগরিব", todayTimes.maghrib),
-      Triple("Isha", "এশা", todayTimes.isha)
-    )
+    fun prayerTargets(times: CalculatedPrayerTimes) = listOf(
+      Triple("Fajr", "ফজর", times.fajr),
+      Triple("Dhuhr", "যোহর", times.dhuhr),
+      Triple("Asr", "আসর", times.asr),
+      Triple("Maghrib", "মাগরিব", times.maghrib),
+      Triple("Isha", "এশা", times.isha)
+    ).filter { enabledPrayers.contains(it.first) }
 
-    for (p in prayers) {
-      val prayerCal = parseTimeToCalendar(p.third, now)
+    for (prayer in prayerTargets(todayTimes)) {
+      val prayerCal = parseTimeToCalendar(prayer.third, now)
       if (prayerCal.timeInMillis > now.timeInMillis + 5000L) {
-        return PrayerAlarmTarget(p.first, p.second, prayerCal.timeInMillis)
+        return PrayerAlarmTarget(prayer.first, prayer.second, prayerCal.timeInMillis)
       }
     }
 
-    // If all passed today, schedule tomorrow's Fajr
+    // If all enabled prayers have passed today, choose the first enabled prayer tomorrow.
     val tomorrow = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
     val tomorrowTimes = calculate(latitude, longitude, isHanafi, tomorrow)
-    val tomorrowFajrCal = parseTimeToCalendar(tomorrowTimes.fajr, tomorrow)
-    return PrayerAlarmTarget("Fajr", "ফজর", tomorrowFajrCal.timeInMillis)
+    val next = prayerTargets(tomorrowTimes).first()
+    val target = parseTimeToCalendar(next.third, tomorrow)
+    return PrayerAlarmTarget(next.first, next.second, target.timeInMillis)
   }
 
   fun parseTimeToCalendar(timeStr: String, baseCal: Calendar): Calendar {
