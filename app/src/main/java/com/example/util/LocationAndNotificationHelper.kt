@@ -171,7 +171,9 @@ object LocationAndNotificationHelper {
         for (provider in providers) {
           try {
             val loc = lm.getLastKnownLocation(provider)
-            if (loc != null && (bestLocation == null || loc.accuracy < bestLocation.accuracy)) {
+            val ageMillis = if (loc != null) System.currentTimeMillis() - loc.time else Long.MAX_VALUE
+            val isRecent = loc != null && ageMillis in 0..(6 * 60 * 60 * 1000L)
+            if (isRecent && (bestLocation == null || loc!!.time > bestLocation!!.time)) {
               bestLocation = loc
             }
           } catch (_: SecurityException) {}
@@ -189,11 +191,26 @@ object LocationAndNotificationHelper {
       }
     }
 
-    // Default location before GPS permission or detection
+    // Reuse the last successfully resolved coordinates while waiting for a fresh fix.
+    val saved = context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE)
+    val savedLat = saved.getString("gps_latitude", null)?.toDoubleOrNull()
+    val savedLng = saved.getString("gps_longitude", null)?.toDoubleOrNull()
+    if (savedLat != null && savedLng != null &&
+      savedLat in -90.0..90.0 && savedLng in -180.0..180.0
+    ) {
+      return UserLocationInfo(
+        latitude = savedLat,
+        longitude = savedLng,
+        addressName = saved.getString("gps_address_name", null) ?: "GPS location",
+        isAutoDetected = true
+      )
+    }
+
+    // Default location is explicitly a fallback until a real GPS fix is available.
     return UserLocationInfo(
       latitude = 23.8103,
       longitude = 90.4125,
-      addressName = "ঢাকা, বাংলাদেশ",
+      addressName = if (Locale.getDefault().language == "bn") "ঢাকা, বাংলাদেশ (ডিফল্ট)" else "Dhaka, Bangladesh (default)",
       isAutoDetected = false
     )
   }
