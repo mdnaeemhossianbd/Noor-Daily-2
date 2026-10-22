@@ -22,12 +22,28 @@ object PrayerAlarmScheduler {
         return
       }
 
+      val prayerPreferenceKeys = mapOf(
+        "Fajr" to "azan_fajr_enabled",
+        "Dhuhr" to "azan_dhuhr_enabled",
+        "Asr" to "azan_asr_enabled",
+        "Maghrib" to "azan_maghrib_enabled",
+        "Isha" to "azan_isha_enabled"
+      )
+      val enabledPrayers = prayerPreferenceKeys.filter { (_, key) -> prefs.getBoolean(key, true) }.keys
+      if (enabledPrayers.isEmpty()) {
+        cancelAlarms(context)
+        return
+      }
+
       val isHanafi = prefs.getBoolean("is_hanafi_madhhab", true)
       val location = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+      val latitude = prefs.getString("gps_latitude", null)?.toDoubleOrNull() ?: location.latitude
+      val longitude = prefs.getString("gps_longitude", null)?.toDoubleOrNull() ?: location.longitude
       val nextTarget = PrayerTimeCalculator.getNextPrayerAlarmTarget(
-        latitude = location.latitude,
-        longitude = location.longitude,
-        isHanafi = isHanafi
+        latitude = latitude,
+        longitude = longitude,
+        isHanafi = isHanafi,
+        enabledPrayers = enabledPrayers
       )
 
       val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
