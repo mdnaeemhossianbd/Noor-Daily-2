@@ -68,6 +68,14 @@ fun PrayerTimesScreen(
     mutableStateOf(LocationAndNotificationHelper.getCurrentDeviceLocation(context))
   }
 
+  // Refresh coordinates when this screen opens; keep cached coordinates as an immediate fallback.
+  LaunchedEffect(Unit) {
+    LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+      userLocationInfo = freshLocation
+      com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+    }
+  }
+
   // Location Permission Launcher
   val locationPermissionLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -76,6 +84,10 @@ fun PrayerTimesScreen(
       permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
     if (granted) {
       userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+      LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+        userLocationInfo = freshLocation
+        com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+      }
     }
   }
 
@@ -367,13 +379,19 @@ fun PrayerTimesScreen(
               Surface(
                 onClick = {
                   isUsingGps = true
-                  val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                  val hasPermission =
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                   if (!hasPermission) {
                     locationPermissionLauncher.launch(
                       arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
                     )
                   } else {
                     userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+                    LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+                      userLocationInfo = freshLocation
+                      com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+                    }
                   }
                 },
                 shape = RoundedCornerShape(10.dp),
@@ -849,6 +867,10 @@ fun PrayerTimesScreen(
       onSelectGps = {
         isUsingGps = true
         userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+        LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+          userLocationInfo = freshLocation
+          com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+        }
       },
       onSelectCity = { city ->
         isUsingGps = false
