@@ -48,9 +48,10 @@ fun PrayerTimesScreen(
   onMadhhabToggled: (Boolean) -> Unit,
 ) {
   val context = LocalContext.current
+  val locationPrefs = remember { context.getSharedPreferences("noor_daily_prefs", android.content.Context.MODE_PRIVATE) }
 
-  // User location & city selection state
-  var isUsingGps by remember { mutableStateOf(true) }
+  // User location & city selection state, persisted across tab/app restarts.
+  var isUsingGps by remember { mutableStateOf(locationPrefs.getBoolean("use_gps_location", true)) }
   var currentSelectedCity by remember { mutableStateOf(selectedCity) }
   var showCityDialog by remember { mutableStateOf(false) }
 
@@ -413,6 +414,7 @@ fun PrayerTimesScreen(
               Surface(
                 onClick = {
                   isUsingGps = true
+                  locationPrefs.edit().putBoolean("use_gps_location", true).apply()
                   val hasPermission =
                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                     ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -900,6 +902,7 @@ fun PrayerTimesScreen(
       isUsingGps = isUsingGps,
       onSelectGps = {
         isUsingGps = true
+        locationPrefs.edit().putBoolean("use_gps_location", true).apply()
         userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
         LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
           userLocationInfo = freshLocation
@@ -909,7 +912,15 @@ fun PrayerTimesScreen(
       onSelectCity = { city ->
         isUsingGps = false
         currentSelectedCity = city
+        locationPrefs.edit()
+          .putBoolean("use_gps_location", false)
+          .putString("selected_city_name_en", city.nameEn)
+          .putString("selected_city_latitude", city.latitude.toString())
+          .putString("selected_city_longitude", city.longitude.toString())
+          .putString("selected_city_timezone", city.timeZoneId)
+          .apply()
         onCitySelected(city)
+        com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
       },
       onDismiss = { showCityDialog = false }
     )
