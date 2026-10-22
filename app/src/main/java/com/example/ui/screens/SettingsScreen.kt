@@ -518,14 +518,22 @@ fun SettingsScreen(
           verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
           Text(
-            text = "সংস্করণ ১.২.০ (Build 2026)",
+            text = when (currentLang) {
+              "bn" -> "সংস্করণ ১.২.০ (Build 2026)"
+              "ar" -> "الإصدار ١.٢.٠ (Build 2026)"
+              else -> "Version 1.2.0 (Build 2026)"
+            },
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
           )
 
           Text(
-            text = "নূর ডেইলি বিশ্বজুড়ে মুসলিম উম্মাহর দৈনন্দিন ইবাদত ও দ্বীনি দিকনির্দেশনার জন্য একটি আধুনিক ও নির্ভরযোগ্য ডিজিটাল মাধ্যম।",
+            text = when (currentLang) {
+              "bn" -> "নূর ডেইলি বিশ্বজুড়ে মুসলিম উম্মাহর দৈনন্দিন ইবাদত ও দ্বীনি দিকনির্দেশনার জন্য একটি আধুনিক ও নির্ভরযোগ্য ডিজিটাল মাধ্যম।"
+              "ar" -> "نور ديلي وسيلة رقمية حديثة وموثوقة لمساعدة المسلمين حول العالم في عباداتهم اليومية وإرشاداتهم الإسلامية."
+              else -> "Noor Daily is a modern, reliable digital companion for Muslims worldwide, supporting daily worship and Islamic guidance."
+            },
             fontSize = 12.sp,
             lineHeight = 17.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -534,12 +542,20 @@ fun SettingsScreen(
           HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
           Text(
-            text = "প্রধান বৈশিষ্ট্যসমূহ:",
+            text = when (currentLang) {
+              "bn" -> "প্রধান বৈশিষ্ট্যসমূহ:"
+              "ar" -> "الميزات الرئيسية:"
+              else -> "Key Features:"
+            },
             fontWeight = FontWeight.Bold,
             fontSize = 13.sp
           )
           Text(
-            text = "• জিপিএস লোকেশন অনুযায়ী রিয়েল-টাইম নামাজের ওয়াক্ত\n• ওয়াক্তের শুরুতে ২০ সেকেন্ড আযান অ্যালার্ট\n• সহীহ বুখারী, মুসলিম ও আবু দাউদ থেকে সংগৃহীত সহীহ হাদিস\n• বিষয়ভিত্তিক পবিত্র কুরআনের আয়াত ও বঙ্গানুবাদ\n• তাহাজ্জুদ ও রোজা রাখার বিশেষ আমল ও রুটিন",
+            text = when (currentLang) {
+              "bn" -> "• জিপিএস লোকেশন অনুযায়ী রিয়েল-টাইম নামাজের ওয়াক্ত\n• ওয়াক্তের শুরুতে ২০ সেকেন্ড আযান অ্যালার্ট\n• সহীহ বুখারী, মুসলিম ও আবু দাউদ থেকে সংগৃহীত সহীহ হাদিস\n• বিষয়ভিত্তিক পবিত্র কুরআনের আয়াত ও বঙ্গানুবাদ\n• তাহাজ্জুদ ও রোজা রাখার বিশেষ আমল ও রুটিন"
+              "ar" -> "• أوقات الصلاة حسب موقع GPS\n• تنبيه الأذان لمدة ٢٠ ثانية عند دخول الوقت\n• أحاديث من صحيح البخاري ومسلم وأبي داود\n• آيات قرآنية مع الترجمة البنغالية حسب الموضوع\n• إرشادات للتهجد والصيام"
+              else -> "• Real-time prayer times based on GPS location\n• 20-second Adhan alert at the start of prayer time\n• Authentic Hadith from Sahih Bukhari, Muslim and Abu Dawud\n• Topic-based Quran verses with Bangla translations\n• Guidance for Tahajjud and fasting"
+            },
             fontSize = 12.sp,
             lineHeight = 18.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -548,12 +564,20 @@ fun SettingsScreen(
           HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
           Text(
-            text = "যোগাযোগ ও ওয়েবসাইট:",
+            text = when (currentLang) {
+              "bn" -> "যোগাযোগ ও ওয়েবসাইট:"
+              "ar" -> "التواصل والموقع الإلكتروني:"
+              else -> "Contact & Website:"
+            },
             fontWeight = FontWeight.Bold,
             fontSize = 13.sp
           )
           Text(
-            text = "ওয়েবসাইট: $APP_WEBSITE_URL\nইমেইল: $SUPPORT_EMAIL",
+            text = when (currentLang) {
+              "bn" -> "ওয়েবসাইট: $APP_WEBSITE_URL\nইমেইল: $SUPPORT_EMAIL"
+              "ar" -> "الموقع: $APP_WEBSITE_URL\nالبريد الإلكتروني: $SUPPORT_EMAIL"
+              else -> "Website: $APP_WEBSITE_URL\nEmail: $SUPPORT_EMAIL"
+            },
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.primary
           )
@@ -564,12 +588,12 @@ fun SettingsScreen(
           onClick = { openWebUrl(APP_WEBSITE_URL) },
           colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-          Text("ওয়েবসাইট ভিজিট", fontSize = 12.sp)
+          Text(when (currentLang) { "bn" -> "ওয়েবসাইট ভিজিট"; "ar" -> "زيارة الموقع"; else -> "Visit Website" }, fontSize = 12.sp)
         }
       },
       dismissButton = {
         TextButton(onClick = { showAboutDialog = false }) {
-          Text("বন্ধ করুন")
+          Text(when (currentLang) { "bn" -> "বন্ধ করুন"; "ar" -> "إغلاق"; else -> "Close" })
         }
       }
     )
