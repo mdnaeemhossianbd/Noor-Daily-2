@@ -208,7 +208,8 @@ fun TasbihDialog(
               )
               Spacer(modifier = Modifier.height(4.dp))
               Text(
-                text = selectedDua.meaningBn,
+                text = if (currentLang == "bn") selectedDua.meaningBn
+                  else "${AppStrings.text(currentLang, "tasbih.meaning")}: ${selectedDua.meaningBn}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
