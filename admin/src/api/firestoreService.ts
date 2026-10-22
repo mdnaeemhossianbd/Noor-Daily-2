@@ -4,7 +4,8 @@ import {
   get, 
   push, 
   remove, 
-  onValue 
+  onValue,
+  update 
 } from 'firebase/database';
 import { db } from './firebase';
 import { 
@@ -107,7 +108,7 @@ export async function syncAllAppContentToFirestore(): Promise<{
     categoriesMap[catId] = { ...cat, id: catId, updatedAt: Date.now() };
     categoriesCount++;
   }
-  await set(ref(db, 'categories'), categoriesMap);
+  await update(ref(db, 'categories'), categoriesMap);
 
   // 2. Sync Posts to /posts
   const postsMap: Record<string, Post> = {};
@@ -116,7 +117,7 @@ export async function syncAllAppContentToFirestore(): Promise<{
     postsMap[postId] = { ...post, id: postId, updatedAt: Date.now() };
     postsCount++;
   }
-  await set(ref(db, 'posts'), postsMap);
+  await update(ref(db, 'posts'), postsMap);
 
   // 3. Sync Quizzes to /quizzes
   const quizzesMap: Record<string, QuizQuestion> = {};
@@ -125,7 +126,7 @@ export async function syncAllAppContentToFirestore(): Promise<{
     quizzesMap[quizId] = { ...quiz, id: quizId, updatedAt: Date.now() };
     quizzesCount++;
   }
-  await set(ref(db, 'quizzes'), quizzesMap);
+  await update(ref(db, 'quizzes'), quizzesMap);
 
   // 4. Sync Calendar Events to /calendar_events
   const calendarMap: Record<string, IslamicCalendarPost> = {};
@@ -134,7 +135,7 @@ export async function syncAllAppContentToFirestore(): Promise<{
     calendarMap[eventId] = { ...event, id: eventId, updatedAt: Date.now() };
     calendarCount++;
   }
-  await set(ref(db, 'calendar_events'), calendarMap);
+  await update(ref(db, 'calendar_events'), calendarMap);
 
   // Cache locally
   localStorage.setItem('noor_categories', JSON.stringify(Object.values(categoriesMap)));
