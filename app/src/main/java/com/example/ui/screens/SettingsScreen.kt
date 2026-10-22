@@ -438,7 +438,15 @@ fun SettingsScreen(
         Column {
           ListItem(
             headlineContent = { Text("বাংলা (Bangla)") },
-            supportingContent = { Text("বাংলা ভাষায় সকল কনটেন্ট ও মেন্যু") },
+            supportingContent = {
+              Text(
+                when (currentLang) {
+                  "bn" -> "বাংলা ভাষায় সকল কনটেন্ট ও মেন্যু"
+                  "ar" -> "المحتوى والقوائم باللغة البنغالية"
+                  else -> "All content and menus in Bangla"
+                }
+              )
+            },
             leadingContent = {
               RadioButton(
                 selected = currentLang == "bn",
