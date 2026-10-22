@@ -8,6 +8,10 @@
       ".read": true,
       ".write": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)"
     },
+    "subcategories": {
+      ".read": true,
+      ".write": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)"
+    },
     "quizzes": {
       ".read": true,
       ".write": "auth != null && (auth.token.email === 'habitsk50@gmail.com' || auth.token.email === 'admin@noordaily.com' || auth.token.admin === true)"
