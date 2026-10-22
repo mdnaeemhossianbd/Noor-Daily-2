@@ -1214,7 +1214,7 @@ object SampleIslamicData {
 
   private const val BASE_RTDB_URL = "https://gen-lang-client-0048418625-default-rtdb.asia-southeast1.firebasedatabase.app"
 
-  fun syncFromFirebase() {
+  fun syncFromFirebase(onPrayerSettingsUpdated: (() -> Unit)? = null) {
     try {
       // 1. Fetch Categories from Realtime Database
       val catsReq = Request.Builder().url("$BASE_RTDB_URL/categories.json").build()
@@ -1286,11 +1286,15 @@ object SampleIslamicData {
               "maghrib" to adjustmentsJson.optInt("maghrib", 0),
               "isha" to adjustmentsJson.optInt("isha", 0)
             )
+            val previousRevision = PrayerTimeCalculator.settingsRevision
             PrayerTimeCalculator.updateAdminSettings(
               method = settings.optString("defaultMethod", "Umm al-Qura"),
               madhhab = settings.optString("defaultMadhhab", "Hanafi"),
               adjustments = adjustments
             )
+            if (PrayerTimeCalculator.settingsRevision != previousRevision) {
+              onPrayerSettingsUpdated?.invoke()
+            }
           }
         } else {
           android.util.Log.w("SampleIslamicData", "Prayer settings sync HTTP ${response.code}")
