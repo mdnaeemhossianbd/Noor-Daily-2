@@ -180,7 +180,7 @@ object LocationAndNotificationHelper {
         }
 
         if (bestLocation != null) {
-          val addressText = geocodeLocation(context, bestLocation.latitude, bestLocation.longitude)
+          val addressText = geocodeLocation(context, bestLocation.latitude, bestLocation.longitude, getAppLanguage(context))
           return UserLocationInfo(
             latitude = bestLocation.latitude,
             longitude = bestLocation.longitude,
@@ -232,7 +232,7 @@ object LocationAndNotificationHelper {
         if (!lm.isProviderEnabled(provider)) continue
         lm.requestSingleUpdate(provider, object : android.location.LocationListener {
           override fun onLocationChanged(location: Location) {
-            val addressText = geocodeLocation(context, location.latitude, location.longitude)
+            val addressText = geocodeLocation(context, location.latitude, location.longitude, getAppLanguage(context))
             context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE).edit()
               .putString("gps_latitude", location.latitude.toString())
               .putString("gps_longitude", location.longitude.toString())
@@ -356,20 +356,28 @@ object LocationAndNotificationHelper {
     return 6371.0 * c
   }
 
-  private fun geocodeLocation(context: Context, lat: Double, lon: Double): String {
-    // 1. First attempt: Device Native Geocoder for micro Area + City (e.g. Mirpur, Dhaka)
+  private fun getAppLanguage(context: Context): String =
+    context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE)
+      .getString("app_language", Locale.getDefault().language) ?: Locale.getDefault().language
+
+  private fun geocodeLocation(context: Context, lat: Double, lon: Double, language: String): String {
+    // Use the selected app language for native reverse-geocoding results.
+    val geocoderLocale = when (language) {
+      "ar" -> Locale("ar")
+      "bn" -> Locale("bn")
+      else -> Locale.ENGLISH
+    }
+    // Prefer a true locality/city name over the broad administrative region.
     try {
       if (Geocoder.isPresent()) {
-        val geocoder = Geocoder(context, Locale.getDefault())
+        val geocoder = Geocoder(context, geocoderLocale)
         @Suppress("DEPRECATION")
         val addresses: List<Address>? = geocoder.getFromLocation(lat, lon, 1)
         if (!addresses.isNullOrEmpty()) {
           val address = addresses[0]
           val area = address.subLocality?.trim()?.takeIf { it.isNotBlank() }
             ?: address.thoroughfare?.trim()?.takeIf { it.isNotBlank() && !it.matches(Regex("^[0-9+-.\\s]+$")) }
-            ?: address.subAdminArea?.trim()?.takeIf { it.isNotBlank() }
           val city = address.locality?.trim()?.takeIf { it.isNotBlank() }
-            ?: address.adminArea?.trim()?.takeIf { it.isNotBlank() }
           val country = address.countryName?.trim()?.takeIf { it.isNotBlank() }
 
           val formatted = when {
