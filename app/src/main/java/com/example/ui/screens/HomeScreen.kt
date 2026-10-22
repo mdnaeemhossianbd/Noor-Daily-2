@@ -228,7 +228,7 @@ fun HomeScreen(
       if (secondsRemaining > 0) {
         secondsRemaining--
       } else {
-        isAzanPlaying = true
+        // AlarmManager/foreground service owns scheduled playback; avoid a duplicate in-screen player.
         prayerCalculation = PrayerTimeCalculator.calculate(
           latitude = activeLat,
           longitude = activeLng,
