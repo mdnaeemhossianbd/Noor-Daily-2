@@ -20,6 +20,7 @@ object AppStrings {
     "names.meaning_bn" to listOf("বাংলা অর্থ", "Bangla meaning", "المعنى البنغالي"),
     "names.meaning_en" to listOf("English meaning", "English meaning", "المعنى بالإنجليزية"),
     "names.benefit" to listOf("তাৎপর্য ও ফজিলত", "Significance & virtues", "الأهمية والفضائل"),
+    "names.benefit_bangla_only" to listOf("বিস্তারিত ব্যাখ্যা শুধু বাংলায় রয়েছে", "Detailed explanation is available in Bangla only", "الشرح التفصيلي متاح باللغة البنغالية فقط"),
     "calendar.title" to listOf("ইসলামিক হিজরি ক্যালেন্ডার", "Islamic Hijri Calendar", "التقويم الهجري الإسلامي"),
     "calendar.important_days" to listOf("বছরের গুরুত্বপূর্ণ ইসলামিক দিবস ও ফজিলত", "Important Islamic dates and virtues", "المناسبات الإسلامية المهمة وفضائلها")
   )
