@@ -385,7 +385,6 @@ object LocationAndNotificationHelper {
             !city.isNullOrBlank() && !country.isNullOrBlank() -> "$city, $country"
             !city.isNullOrBlank() -> city
             !area.isNullOrBlank() -> area
-            !country.isNullOrBlank() -> country
             else -> null
           }
           if (formatted != null) {
