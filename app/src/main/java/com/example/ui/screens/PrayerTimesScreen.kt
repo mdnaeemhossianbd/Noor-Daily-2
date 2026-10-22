@@ -55,15 +55,14 @@ fun PrayerTimesScreen(
   var currentSelectedCity by remember { mutableStateOf(selectedCity) }
   var showCityDialog by remember { mutableStateOf(false) }
 
-  val (gregFormatted, hijriFormatted) = remember(currentLang) {
-    IslamicDateHelper.getFormattedDates(currentLang)
+  val dateCalendar = if (isUsingGps) {
+    java.util.Calendar.getInstance()
+  } else {
+    java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(currentSelectedCity.timeZoneId))
   }
-  val englishIntlDate = remember(currentLang) {
-    IslamicDateHelper.getEnglishIntlDate()
-  }
-  val banglaSolarDate = remember {
-    IslamicDateHelper.getBanglaSolarDate()
-  }
+  val (gregFormatted, hijriFormatted) = IslamicDateHelper.getFormattedDates(currentLang, dateCalendar)
+  val englishIntlDate = IslamicDateHelper.getEnglishIntlDate(dateCalendar)
+  val banglaSolarDate = IslamicDateHelper.getBanglaSolarDate(dateCalendar)
 
   var userLocationInfo by remember {
     mutableStateOf(LocationAndNotificationHelper.getCurrentDeviceLocation(context))
