@@ -27,9 +27,11 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.AllahName
 import com.example.data.NamesOfAllahData
 import com.example.util.IslamicDateHelper
+import com.example.util.AppStrings
 
 @Composable
 fun NamesOfAllahDialog(
+  currentLang: String,
   onDismiss: () -> Unit
 ) {
   var searchQuery by remember { mutableStateOf("") }
@@ -81,19 +83,23 @@ fun NamesOfAllahDialog(
           ) {
             Column {
               Text(
-                text = "আল্লাহর ৯৯টি গুণবাচক নাম",
+                text = AppStrings.text(currentLang, "names.title"),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
               )
               Text(
-                text = "আসমাউল হুসনা (الأَسْمَاءُ الْحُسْنَىٰ)",
+                text = when (currentLang) {
+                  "bn" -> "আসমাউল হুসনা (الأَسْمَاءُ الْحُسْنَىٰ)"
+                  "ar" -> "الأَسْمَاءُ الْحُسْنَىٰ"
+                  else -> "Asma ul Husna (الأَسْمَاءُ الْحُسْنَىٰ)"
+                },
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
             }
             IconButton(onClick = onDismiss) {
-              Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+              Icon(Icons.Default.Close, contentDescription = AppStrings.text(currentLang, "common.close"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
           }
 
@@ -103,7 +109,7 @@ fun NamesOfAllahDialog(
           OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("নাম বা অর্থ দিয়ে খুঁজুন (যেমন: রহমান, Al-Malik)...", fontSize = 12.sp) },
+            placeholder = { Text(AppStrings.text(currentLang, "names.search"), fontSize = 12.sp) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -144,7 +150,7 @@ fun NamesOfAllahDialog(
                       contentAlignment = Alignment.Center
                     ) {
                       Text(
-                        text = IslamicDateHelper.toBengaliDigits(name.number),
+                        text = AppStrings.digits(currentLang, name.number),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -171,7 +177,7 @@ fun NamesOfAllahDialog(
                   Spacer(modifier = Modifier.height(4.dp))
 
                   Text(
-                    text = name.meaningBn,
+                    text = if (currentLang == "bn") name.meaningBn else name.meaningEn,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -204,13 +210,13 @@ fun NamesOfAllahDialog(
         text = {
           Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-              text = "ক্রমিক: ${IslamicDateHelper.toBengaliDigits(detail.number)}",
+              text = "${AppStrings.text(currentLang, "names.serial")}: ${AppStrings.digits(currentLang, detail.number)}",
               fontSize = 12.sp,
               color = MaterialTheme.colorScheme.primary,
               fontWeight = FontWeight.Bold
             )
             Text(
-              text = "বাংলা অর্থ: ${detail.meaningBn}",
+              text = if (currentLang == "bn") "${AppStrings.text(currentLang, "names.meaning_bn")}: ${detail.meaningBn}" else "${AppStrings.text(currentLang, "names.meaning_en")}: ${detail.meaningEn}",
               fontSize = 14.sp,
               fontWeight = FontWeight.SemiBold
             )
@@ -221,12 +227,12 @@ fun NamesOfAllahDialog(
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             Text(
-              text = "তাৎপর্য ও ফজিলত:",
+              text = AppStrings.text(currentLang, "names.benefit") + ":",
               fontWeight = FontWeight.Bold,
               fontSize = 12.sp
             )
             Text(
-              text = detail.benefitBn,
+              text = if (currentLang == "bn") detail.benefitBn else AppStrings.text(currentLang, "names.benefit_bangla_only"),
               fontSize = 13.sp,
               lineHeight = 18.sp,
               color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -238,7 +244,7 @@ fun NamesOfAllahDialog(
             onClick = { selectedNameDetail = null },
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
           ) {
-            Text("বন্ধ করুন")
+            Text(AppStrings.text(currentLang, "common.close"))
           }
         }
       )
