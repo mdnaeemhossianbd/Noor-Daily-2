@@ -13,6 +13,20 @@ export interface Category {
   updatedAt?: any;
 }
 
+export interface Subcategory {
+  id?: string;
+  categoryId: string;
+  parentSubcategoryId?: string | null;
+  name_bn: string;
+  name_en: string;
+  name_ar?: string;
+  icon?: string;
+  order: number;
+  isActive: boolean;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
 export interface Post {
   id?: string;
   title_en: string;
@@ -35,6 +49,7 @@ export interface Post {
   body_bn?: string;
   body_ar?: string;
   categoryId: string;          // references Category.id
+  subcategoryId?: string;      // references Subcategory.id
   imageUrl?: string;           // public download URL
   status: PostStatus;
   createdAt?: any;

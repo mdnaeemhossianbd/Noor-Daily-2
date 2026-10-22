@@ -9,11 +9,12 @@ import {
 import { db } from './firebase';
 import { 
   defaultCategories, 
+  defaultSubcategories,
   defaultPosts, 
   defaultQuizzes, 
   defaultCalendarEvents 
 } from '../data/seedData';
-import { Category, Post, QuizQuestion, IslamicCalendarPost } from '../types/schema';
+import { Category, Subcategory, Post, QuizQuestion, IslamicCalendarPost } from '../types/schema';
 
 // Helper to get initial cached data or fallback to defaults immediately
 export function getInitialPosts(): Post[] {
@@ -40,6 +41,19 @@ export function getInitialCategories(): Category[] {
     console.error('Error reading cached categories:', e);
   }
   return defaultCategories;
+}
+
+export function getInitialSubcategories(): Subcategory[] {
+  try {
+    const cached = localStorage.getItem('noor_subcategories');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {
+    console.error('Error reading cached subcategories:', e);
+  }
+  return defaultSubcategories;
 }
 
 export function getInitialQuizzes(): QuizQuestion[] {

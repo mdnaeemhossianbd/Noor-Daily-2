@@ -51,20 +51,21 @@ object PrayerAlarmScheduler {
       val triggerAtMillis = nextTarget.triggerTimeMillis
       Log.d(TAG, "Scheduling next Azan alarm for ${nextTarget.nameBn} at $triggerAtMillis")
 
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        // Can use setExactAndAllowWhileIdle for reliable wake up in Doze mode
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         try {
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (alarmManager.canScheduleExactAlarms()) {
+          val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerAtMillis, pendingIntent)
+          alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+          Log.d(TAG, "setAlarmClock succeeded for ${nextTarget.nameBn}")
+        } catch (_: Exception) {
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            try {
               alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
-            } else {
-              alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            } catch (_: SecurityException) {
+              alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
             }
           } else {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
+            alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
           }
-        } catch (_: SecurityException) {
-          alarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)
         }
       } else {
         alarmManager.setExact(AlarmManager.RTC_WAKEUP, triggerAtMillis, pendingIntent)

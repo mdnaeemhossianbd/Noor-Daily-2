@@ -3,9 +3,13 @@ package com.example.model
 data class IslamicPost(
   val id: String,
   val categoryId: String,
+  val subcategoryId: String? = null,
   val categoryNameEn: String,
   val categoryNameBn: String,
   val categoryNameAr: String,
+  val subcategoryNameEn: String? = null,
+  val subcategoryNameBn: String? = null,
+  val subcategoryNameAr: String? = null,
   val titleEn: String,
   val titleBn: String,
   val titleAr: String,
@@ -43,6 +47,12 @@ data class IslamicPost(
     "ar" -> categoryNameAr.ifEmpty { categoryNameEn }
     else -> categoryNameEn.ifEmpty { categoryNameBn }
   }
+
+  fun localizedSubcategory(lang: String): String? = when (lang) {
+    "bn" -> subcategoryNameBn?.ifEmpty { subcategoryNameEn } ?: subcategoryNameEn
+    "ar" -> subcategoryNameAr?.ifEmpty { subcategoryNameEn } ?: subcategoryNameEn
+    else -> subcategoryNameEn?.ifEmpty { subcategoryNameBn } ?: subcategoryNameBn
+  }
 }
 
 data class IslamicCategory(
@@ -53,6 +63,26 @@ data class IslamicCategory(
   val depth: Int = 0,
   val iconName: String = "book",
   val postCount: Int = 0,
+  val subcategoryCount: Int = 0,
+) {
+  fun localizedName(lang: String): String = when (lang) {
+    "bn" -> nameBn.ifEmpty { nameEn }
+    "ar" -> nameAr.ifEmpty { nameEn }
+    else -> nameEn.ifEmpty { nameBn }
+  }
+}
+
+data class IslamicSubcategory(
+  val id: String,
+  val categoryId: String,
+  val parentSubcategoryId: String? = null,
+  val nameEn: String,
+  val nameBn: String,
+  val nameAr: String = "",
+  val iconName: String = "folder",
+  val order: Int = 0,
+  val postCount: Int = 0,
+  val childCount: Int = 0,
 ) {
   fun localizedName(lang: String): String = when (lang) {
     "bn" -> nameBn.ifEmpty { nameEn }
@@ -78,11 +108,16 @@ data class CityLocation(
   val nameBn: String,
   val nameAr: String,
   val country: String,
-  val fajrTime: String,
-  val sunriseTime: String,
-  val dhuhrTime: String,
-  val asrTimeHanafi: String,
-  val asrTimeShafi: String,
-  val maghribTime: String,
-  val ishaTime: String,
+  val countryBn: String = "বাংলাদেশ",
+  val latitude: Double = 23.8103,
+  val longitude: Double = 90.4125,
+  val timeZoneId: String = "Asia/Dhaka",
+  val fajrTime: String = "04:55 AM",
+  val sunriseTime: String = "06:12 AM",
+  val dhuhrTime: String = "12:05 PM",
+  val asrTimeHanafi: String = "04:15 PM",
+  val asrTimeShafi: String = "03:30 PM",
+  val maghribTime: String = "05:58 PM",
+  val ishaTime: String = "07:15 PM",
 )
+

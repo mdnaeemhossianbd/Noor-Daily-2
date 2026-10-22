@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import com.example.data.SampleIslamicData
 import com.example.model.CityLocation
 import com.example.model.IslamicPost
+import com.example.ui.components.CitySelectionDialog
 import com.example.ui.components.IslamicCalendarDialog
 import com.example.ui.components.IslamicQuizDialog
 import com.example.ui.components.NamesOfAllahDialog
@@ -73,18 +74,32 @@ fun HomeScreen(
   var showNamesOfAllahDialog by remember { mutableStateOf(false) }
   var showIslamicCalendarDialog by remember { mutableStateOf(false) }
   var showIslamicQuizDialog by remember { mutableStateOf(false) }
+  var showCityDialog by remember { mutableStateOf(false) }
+
+  // Country & City Selection State (GPS vs Manual City)
+  var isUsingGps by remember { mutableStateOf(true) }
+  var currentSelectedCity by remember { mutableStateOf(selectedCity) }
 
   // Dynamic Location State
   var userLocationInfo by remember {
     mutableStateOf(LocationAndNotificationHelper.getCurrentDeviceLocation(context))
   }
 
-  // Live Clock & Hijri Date
+  // Live Clock & Hijri Date (Timezone aware)
   var liveTimeText by remember { mutableStateOf(IslamicDateHelper.getLiveTimeString(currentLang)) }
-  LaunchedEffect(currentLang) {
+  var cityLiveClockText by remember(isUsingGps, currentSelectedCity, currentLang) {
+    mutableStateOf(
+      if (isUsingGps) IslamicDateHelper.getLiveTimeString(currentLang)
+      else PrayerTimeCalculator.getCityLiveTime(currentSelectedCity.timeZoneId, currentLang)
+    )
+  }
+
+  LaunchedEffect(isUsingGps, currentSelectedCity, currentLang) {
     while (true) {
       delay(1000)
       liveTimeText = IslamicDateHelper.getLiveTimeString(currentLang)
+      cityLiveClockText = if (isUsingGps) IslamicDateHelper.getLiveTimeString(currentLang)
+      else PrayerTimeCalculator.getCityLiveTime(currentSelectedCity.timeZoneId, currentLang)
     }
   }
 
@@ -156,24 +171,38 @@ fun HomeScreen(
     }
   }
 
-  // Live Dynamic Prayer Times Calculation based on user location coordinates
-  var prayerCalculation by remember(userLocationInfo, isHanafi) {
+  // Active coordinates & timezone based on GPS vs manual selection
+  val activeLat = if (isUsingGps) userLocationInfo.latitude else currentSelectedCity.latitude
+  val activeLng = if (isUsingGps) userLocationInfo.longitude else currentSelectedCity.longitude
+  val activeTz = if (isUsingGps) null else currentSelectedCity.timeZoneId
+
+  // Live Dynamic Prayer Times Calculation based on user location coordinates and timezone
+  var prayerCalculation by remember(activeLat, activeLng, isHanafi, activeTz) {
     mutableStateOf(
       PrayerTimeCalculator.calculate(
-        latitude = userLocationInfo.latitude,
-        longitude = userLocationInfo.longitude,
-        isHanafi = isHanafi
+        latitude = activeLat,
+        longitude = activeLng,
+        isHanafi = isHanafi,
+        timeZoneId = activeTz
       )
     )
   }
 
-  // Live second-by-second countdown
+  // Live second-by-second countdown for next prayer
   var secondsRemaining by remember(prayerCalculation) {
     mutableLongStateOf(prayerCalculation.remainingSecondsToNext)
+  }
+  var sehriSecondsRemaining by remember(prayerCalculation) {
+    mutableLongStateOf(prayerCalculation.remainingSecondsToSehri)
+  }
+  var iftarSecondsRemaining by remember(prayerCalculation) {
+    mutableLongStateOf(prayerCalculation.remainingSecondsToIftar)
   }
 
   LaunchedEffect(prayerCalculation) {
     secondsRemaining = prayerCalculation.remainingSecondsToNext
+    sehriSecondsRemaining = prayerCalculation.remainingSecondsToSehri
+    iftarSecondsRemaining = prayerCalculation.remainingSecondsToIftar
     while (true) {
       delay(1000)
       if (secondsRemaining > 0) {
@@ -181,11 +210,14 @@ fun HomeScreen(
       } else {
         isAzanPlaying = true
         prayerCalculation = PrayerTimeCalculator.calculate(
-          latitude = userLocationInfo.latitude,
-          longitude = userLocationInfo.longitude,
-          isHanafi = isHanafi
+          latitude = activeLat,
+          longitude = activeLng,
+          isHanafi = isHanafi,
+          timeZoneId = activeTz
         )
       }
+      if (sehriSecondsRemaining > 0) sehriSecondsRemaining--
+      if (iftarSecondsRemaining > 0) iftarSecondsRemaining--
     }
   }
 
@@ -193,6 +225,14 @@ fun HomeScreen(
   val minutes = (secondsRemaining % 3600) / 60
   val seconds = secondsRemaining % 60
   val countdownFormatted = String.format("%02d:%02d:%02d", hours, minutes, seconds)
+
+  val sehriH = sehriSecondsRemaining / 3600
+  val sehriM = (sehriSecondsRemaining % 3600) / 60
+  val sehriRemainingFormatted = if (currentLang == "bn") "${sehriH} ঘণ্টা ${sehriM} মি." else "${sehriH}h ${sehriM}m"
+
+  val iftarH = iftarSecondsRemaining / 3600
+  val iftarM = (iftarSecondsRemaining % 3600) / 60
+  val iftarRemainingFormatted = if (currentLang == "bn") "${iftarH} ঘণ্টা ${iftarM} মি." else "${iftarH}h ${iftarM}m"
 
   val prayersList = listOf(
     Triple("Fajr", when (currentLang) { "bn" -> "ফজর"; "ar" -> "الفجر"; else -> "Fajr" }, prayerCalculation.fajr),
@@ -233,7 +273,7 @@ fun HomeScreen(
         modifier = Modifier.fillMaxWidth()
       ) {
         Column(modifier = Modifier.padding(16.dp)) {
-          // Row 1: Detected Address & GPS Refresh
+          // Row 1: Detected Address & Buttons (Country/City change & GPS)
           Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -250,7 +290,7 @@ fun HomeScreen(
                 contentAlignment = Alignment.Center
               ) {
                 Icon(
-                  Icons.Default.LocationOn,
+                  if (isUsingGps) Icons.Default.LocationOn else Icons.Default.Public,
                   contentDescription = null,
                   tint = MaterialTheme.colorScheme.primary,
                   modifier = Modifier.size(18.dp)
@@ -259,7 +299,7 @@ fun HomeScreen(
               Spacer(modifier = Modifier.width(10.dp))
               Column {
                 Text(
-                  text = userLocationInfo.addressName,
+                  text = if (isUsingGps) userLocationInfo.addressName else (if (currentLang == "bn") currentSelectedCity.nameBn else currentSelectedCity.nameEn),
                   fontSize = 14.sp,
                   fontWeight = FontWeight.Bold,
                   color = MaterialTheme.colorScheme.onSurface,
@@ -267,10 +307,18 @@ fun HomeScreen(
                   overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                  text = when (currentLang) {
-                    "bn" -> "স্বয়ংক্রিয় জিপিএস অবস্থান"
-                    "ar" -> "موقع GPS تلقائي"
-                    else -> "Auto GPS Location"
+                  text = if (isUsingGps) {
+                    when (currentLang) {
+                      "bn" -> "স্বয়ংক্রিয় জিপিএস অবস্থান"
+                      "ar" -> "موقع GPS تلقائي"
+                      else -> "Auto GPS Location"
+                    }
+                  } else {
+                    when (currentLang) {
+                      "bn" -> "নির্বাচিত শহর ও দেশ"
+                      "ar" -> "المدينة المختارة"
+                      else -> "Selected City"
+                    }
                   },
                   fontSize = 11.sp,
                   color = MaterialTheme.colorScheme.primary
@@ -278,41 +326,72 @@ fun HomeScreen(
               }
             }
 
-            // Location Permission / Refresh button
-            Surface(
-              onClick = {
-                if (!hasLocationPermission) {
-                  locationPermissionLauncher.launch(
-                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
-                  )
-                } else {
-                  userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
-                }
-              },
-              shape = RoundedCornerShape(12.dp),
-              color = MaterialTheme.colorScheme.primaryContainer,
-              border = BorderStroke(1.dp, IslamicEmeraldLight.copy(alpha = 0.3f))
-            ) {
-              Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
+            // Buttons: Country/City Selector & GPS
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+              // 1. Country / City Selector Button
+              Surface(
+                onClick = { showCityDialog = true },
+                shape = RoundedCornerShape(12.dp),
+                color = if (!isUsingGps) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
               ) {
-                Icon(
-                  Icons.Default.MyLocation,
-                  contentDescription = "GPS",
-                  modifier = Modifier.size(14.dp),
-                  tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                  text = when (currentLang) {
-                    "bn" -> if (hasLocationPermission) "রিফ্রেশ" else "অনুমতি"
-                    else -> if (hasLocationPermission) "Refresh" else "Permission"
-                  },
-                  fontSize = 11.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                Row(
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(
+                    Icons.Default.Public,
+                    contentDescription = "Country/City",
+                    modifier = Modifier.size(13.dp),
+                    tint = if (!isUsingGps) Color.White else MaterialTheme.colorScheme.primary
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = when (currentLang) { "bn" -> "দেশ/শহর"; else -> "City" },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (!isUsingGps) Color.White else MaterialTheme.colorScheme.primary
+                  )
+                }
+              }
+
+              // 2. GPS Button
+              Surface(
+                onClick = {
+                  isUsingGps = true
+                  if (!hasLocationPermission) {
+                    locationPermissionLauncher.launch(
+                      arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                    )
+                  } else {
+                    userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+                  }
+                },
+                shape = RoundedCornerShape(12.dp),
+                color = if (isUsingGps) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                border = BorderStroke(1.dp, IslamicEmeraldLight.copy(alpha = 0.3f))
+              ) {
+                Row(
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Icon(
+                    Icons.Default.MyLocation,
+                    contentDescription = "GPS",
+                    modifier = Modifier.size(13.dp),
+                    tint = if (isUsingGps) Color.White else MaterialTheme.colorScheme.primary
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text(
+                    text = when (currentLang) {
+                      "bn" -> if (hasLocationPermission) "জিপিএস" else "অনুমতি"
+                      else -> if (hasLocationPermission) "GPS" else "Permission"
+                    },
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isUsingGps) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                  )
+                }
               }
             }
           }
@@ -337,7 +416,7 @@ fun HomeScreen(
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
-                text = liveTimeText,
+                text = "${if (isUsingGps) (if (currentLang == "bn") "স্থানীয় সময়: " else "Time: ") else (if (currentLang == "bn") "ঘড়ির সময়: " else "Clock: ")}$cityLiveClockText",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -390,6 +469,120 @@ fun HomeScreen(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.secondary
+              )
+            }
+          }
+        }
+      }
+    }
+
+    // SECTION 1.5: Prominent Sehri & Iftar Time Card with Live Countdowns
+    item {
+      Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+        modifier = Modifier.fillMaxWidth()
+      ) {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(14.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          // Sehri Column
+          Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                Icons.Default.Bedtime,
+                contentDescription = null,
+                tint = IslamicEmeraldPrimary,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = when (currentLang) {
+                  "bn" -> "সেহরির শেষ সময়"
+                  "ar" -> "نهاية السحور"
+                  else -> "Sehri Ends"
+                },
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = IslamicEmeraldPrimary
+              )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+              text = prayerCalculation.sehriEndTime,
+              fontSize = 18.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Surface(
+              shape = RoundedCornerShape(6.dp),
+              color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+            ) {
+              Text(
+                text = "বাকি: $sehriRemainingFormatted",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+              )
+            }
+          }
+
+          VerticalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+            modifier = Modifier.height(52.dp)
+          )
+
+          // Iftar Column
+          Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                Icons.Default.Restaurant,
+                contentDescription = null,
+                tint = IslamicGoldAccent,
+                modifier = Modifier.size(16.dp)
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = when (currentLang) {
+                  "bn" -> "ইফতারের সময়"
+                  "ar" -> "وقت الإفطار"
+                  else -> "Iftar Time"
+                },
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = IslamicGoldAccent
+              )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+              text = prayerCalculation.iftarTime,
+              fontSize = 18.sp,
+              fontWeight = FontWeight.ExtraBold,
+              color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Surface(
+              shape = RoundedCornerShape(6.dp),
+              color = IslamicGoldAccent.copy(alpha = 0.2f)
+            ) {
+              Text(
+                text = "বাকি: $iftarRemainingFormatted",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary,
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
               )
             }
           }
@@ -1178,5 +1371,23 @@ fun HomeScreen(
 
   if (showIslamicQuizDialog) {
     IslamicQuizDialog(currentLang = currentLang, onDismiss = { showIslamicQuizDialog = false })
+  }
+
+  if (showCityDialog) {
+    CitySelectionDialog(
+      currentLang = currentLang,
+      selectedCity = currentSelectedCity,
+      isUsingGps = isUsingGps,
+      onSelectGps = {
+        isUsingGps = true
+        userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+      },
+      onSelectCity = { city ->
+        isUsingGps = false
+        currentSelectedCity = city
+        onCitySelected(city)
+      },
+      onDismiss = { showCityDialog = false }
+    )
   }
 }

@@ -1,4 +1,4 @@
-import { Category, Post, QuizQuestion, IslamicCalendarPost } from '../types/schema';
+import { Category, Subcategory, Post, QuizQuestion, IslamicCalendarPost } from '../types/schema';
 
 export const defaultCategories: Category[] = [
   {
@@ -66,10 +66,51 @@ export const defaultCategories: Category[] = [
   }
 ];
 
+export const defaultSubcategories: Subcategory[] = [
+  // Namaz
+  { id: "sub_fajr", categoryId: "cat_namaz", name_bn: "ফজরের নামাজ", name_en: "Fajr Prayer", order: 1, isActive: true },
+  { id: "sub_zuhr", categoryId: "cat_namaz", name_bn: "যোহরের নামাজ", name_en: "Zuhr Prayer", order: 2, isActive: true },
+  { id: "sub_asr", categoryId: "cat_namaz", name_bn: "আসরের নামাজ", name_en: "Asr Prayer", order: 3, isActive: true },
+  { id: "sub_maghrib", categoryId: "cat_namaz", name_bn: "মাগরিবের নামাজ", name_en: "Maghrib Prayer", order: 4, isActive: true },
+  { id: "sub_isha", categoryId: "cat_namaz", name_bn: "এশার নামাজ ও বিতর", name_en: "Isha & Witr", order: 5, isActive: true },
+  { id: "sub_tahajjud", categoryId: "cat_namaz", name_bn: "তাহাজ্জুদ ও নফল নামাজ", name_en: "Tahajjud & Nafl", order: 6, isActive: true },
+  { id: "sub_jummah_eid", categoryId: "cat_namaz", name_bn: "জুমুআ ও দুই ঈদের নামাজ", name_en: "Jummah & Eid Prayers", order: 7, isActive: true },
+  { id: "sub_janaza_qaza", categoryId: "cat_namaz", name_bn: "জানাজা ও কাজা নামাজের নিয়ম", name_en: "Janaza & Qaza Rules", order: 8, isActive: true },
+
+  // Roza
+  { id: "sub_roza_niyat", categoryId: "cat_roza", name_bn: "রোজার নিয়ত ও বিধান", name_en: "Fasting Intention & Rules", order: 1, isActive: true },
+  { id: "sub_sehri_iftar", categoryId: "cat_roza", name_bn: "সেহরি ও ইফতারের দোয়া ও নিয়ম", name_en: "Sehri & Iftar Duas", order: 2, isActive: true },
+  { id: "sub_tarabi", categoryId: "cat_roza", name_bn: "তারাবীহ নামাজের নিয়ম ও দোয়া", name_en: "Tarabi Prayer & Duas", order: 3, isActive: true },
+  { id: "sub_itikaf", categoryId: "cat_roza", name_bn: "ইতিকাফ ও লাইলাতুল কদর", name_en: "Itikaf & Shab-e-Qadr", order: 4, isActive: true },
+
+  // Quran
+  { id: "sub_surah_baqarah", categoryId: "cat_quran", name_bn: "সূরা আল-বাকারা", name_en: "Surah Al-Baqarah", order: 1, isActive: true },
+  { id: "sub_surah_yasin", categoryId: "cat_quran", name_bn: "সূরা ইয়াসীন ও ফজিলত", name_en: "Surah Yasin & Benefits", order: 2, isActive: true },
+  { id: "sub_ayat_kursi", categoryId: "cat_quran", name_bn: "আয়াতুল কুরসী ও শেষ ৩ আয়াত", name_en: "Ayatul Kursi", order: 3, isActive: true },
+  { id: "sub_quran_recitation", categoryId: "cat_quran", name_bn: "কুরআন তেলাওয়াত ও তাজবীদ", name_en: "Quran Recitation", order: 4, isActive: true },
+
+  // Hadith
+  { id: "sub_iman_purity", categoryId: "cat_hadith", name_bn: "ঈমান ও পবিত্রতা (তাহরাত)", name_en: "Faith & Purity", order: 1, isActive: true },
+  { id: "sub_akhlaq", categoryId: "cat_hadith", name_bn: "উত্তম চরিত্র ও সুন্দর আমল", name_en: "Manners & Good Deeds", order: 2, isActive: true },
+  { id: "sub_bukhari_core", categoryId: "cat_hadith", name_bn: "সহিহ হাদিস সংকলন", name_en: "Selected Sahih Hadiths", order: 3, isActive: true },
+
+  // Duas
+  { id: "sub_morning_evening", categoryId: "cat_duas", name_bn: "সকাল-সন্ধ্যার মাসনূন জিকির", name_en: "Morning & Evening Adhkar", order: 1, isActive: true },
+  { id: "sub_daily_life", categoryId: "cat_duas", name_bn: "দৈনন্দিন জীবনের মাসনূন দোয়া", name_en: "Daily Life Duas", order: 2, isActive: true },
+  { id: "sub_forgiveness", categoryId: "cat_duas", name_bn: "তওবা, ক্ষমা ও মনের প্রশান্তি", name_en: "Repentance & Inner Peace", order: 3, isActive: true },
+
+  // Zakat
+  { id: "sub_zakat_calc", categoryId: "cat_zakat", name_bn: "যাকাতের নিসাব ও হিসাব", name_en: "Zakat Rules & Nisab", order: 1, isActive: true },
+  { id: "sub_sadqah", categoryId: "cat_zakat", name_bn: "সদকা ও দানের ফযিলত", name_en: "Sadaqah & Charity", order: 2, isActive: true }
+];
+
 export const defaultPosts: Post[] = [
   {
     id: "post_ayat_today",
     categoryId: "cat_quran",
+    subcategoryId: "sub_surah_baqarah",
+    subcategoryNameBn: "সূরা আল-বাকারা",
+    subcategoryNameEn: "Surah Al-Baqarah",
     mainCategory: "Holy Quran",
     subCategory: "Surah Al-Baqarah",
     title_en: "Ayat of the Day: Surah Al-Baqarah (2:286)",
@@ -90,6 +131,9 @@ export const defaultPosts: Post[] = [
   {
     id: "post_hadith_today",
     categoryId: "cat_hadith",
+    subcategoryId: "sub_iman_purity",
+    subcategoryNameBn: "ঈমান ও পবিত্রতা (তাহরাত)",
+    subcategoryNameEn: "Faith & Purity",
     mainCategory: "Prophetic Hadiths",
     subCategory: "Purity & Taharah",
     title_en: "Daily Hadith: Purity is Half of Faith",
@@ -110,6 +154,9 @@ export const defaultPosts: Post[] = [
   {
     id: "post_tahajjud",
     categoryId: "cat_namaz",
+    subcategoryId: "sub_tahajjud",
+    subcategoryNameBn: "তাহাজ্জুদ ও নফল নামাজ",
+    subcategoryNameEn: "Tahajjud & Nafl",
     mainCategory: "Namaz & Prayer Rules",
     subCategory: "Nafl Prayers",
     title_en: "Virtues of Tahajjud Prayer (Qiyam al-Layl)",
@@ -130,6 +177,9 @@ export const defaultPosts: Post[] = [
   {
     id: "post_ayat_kursi",
     categoryId: "cat_quran",
+    subcategoryId: "sub_ayat_kursi",
+    subcategoryNameBn: "আয়াতুল কুরসী ও শেষ ৩ আয়াত",
+    subcategoryNameEn: "Ayatul Kursi",
     mainCategory: "Holy Quran",
     subCategory: "Greatest Verses",
     title_en: "Ayat al-Kursi: The Greatest Verse of the Quran",
@@ -150,6 +200,9 @@ export const defaultPosts: Post[] = [
   {
     id: "post_morning_adhkar",
     categoryId: "cat_duas",
+    subcategoryId: "sub_morning_evening",
+    subcategoryNameBn: "সকাল-সন্ধ্যার মাসনূন জিকির",
+    subcategoryNameEn: "Morning & Evening Adhkar",
     mainCategory: "Daily Duas & Adhkar",
     subCategory: "Morning Remembrance",
     title_en: "Essential Morning and Evening Supplications",
@@ -170,6 +223,9 @@ export const defaultPosts: Post[] = [
   {
     id: "post_ramadan_prep",
     categoryId: "cat_roza",
+    subcategoryId: "sub_roza_niyat",
+    subcategoryNameBn: "রোজার নিয়ত ও বিধান",
+    subcategoryNameEn: "Fasting Intention & Rules",
     mainCategory: "Fasting & Ramadan",
     subCategory: "Virtues of Sawm",
     title_en: "Preparing for the Blessed Month of Ramadan",

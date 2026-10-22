@@ -7,13 +7,13 @@ import {
 } from 'firebase/database';
 import { ref as storageRef, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../api/firebase';
-import { Post, Category, PostStatus } from '../types/schema';
+import { Post, Category, Subcategory, PostStatus } from '../types/schema';
 import { useAuth } from '../context/AuthContext';
 import { 
-  FilePlus, FileText, Edit3, Trash2, Search, CheckCircle, Clock, X, Image as ImageIcon, AlertCircle, RefreshCw, BookOpen, Quote, Sparkles, Eye, Check
+  FilePlus, FileText, Edit3, Trash2, Search, CheckCircle, Clock, X, Image as ImageIcon, AlertCircle, RefreshCw, BookOpen, Quote, Sparkles, Eye, Check, Layers
 } from 'lucide-react';
-import { defaultPosts, defaultCategories } from '../data/seedData';
-import { getInitialPosts, getInitialCategories, logAudit } from '../api/firestoreService';
+import { defaultPosts, defaultCategories, defaultSubcategories } from '../data/seedData';
+import { getInitialPosts, getInitialCategories, getInitialSubcategories, logAudit } from '../api/firestoreService';
 
 // Auto-generates clean English titles & metadata from Bangla inputs
 function generateAutoEnglish(bnText: string, fallback: string = 'Daily Islamic Post'): string {
@@ -56,12 +56,14 @@ export const PostsManager: React.FC = () => {
   const { currentUser } = useAuth();
   const [posts, setPosts] = useState<Post[]>(getInitialPosts());
   const [categories, setCategories] = useState<Category[]>(getInitialCategories());
+  const [subcategories, setSubcategories] = useState<Subcategory[]>(getInitialSubcategories());
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [subcategoryFilter, setSubcategoryFilter] = useState<string>('all');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<Post | null>(null);
@@ -72,12 +74,12 @@ export const PostsManager: React.FC = () => {
   const [mainArabic, setMainArabic] = useState('');
   const [banglaTranslation, setBanglaTranslation] = useState('');
   const [banglaPronunciation, setBanglaPronunciation] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [mainCategory, setMainCategory] = useState('');
+  const [subcategoryId, setSubcategoryId] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [author, setAuthor] = useState('');
   const [hadithReference, setHadithReference] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [status, setStatus] = useState<PostStatus>('published');
 
@@ -87,11 +89,30 @@ export const PostsManager: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isCustomSubCategory, setIsCustomSubCategory] = useState(false);
 
-  // Only categories directly below the selected main category can receive posts.
-  const availableSubCategories = useMemo(
-    () => categories.filter(c => c.parentId === categoryId && c.isActive !== false),
-    [categories, categoryId]
-  );
+  // Dynamic Sub-Categories List for selected Category
+  const activeSubcategories = useMemo(() => {
+    return subcategories.filter(s => s.categoryId === categoryId && s.isActive !== false);
+  }, [subcategories, categoryId]);
+
+  const availableSubCategories = useMemo(() => {
+    const list: string[] = [];
+
+    // 1. Defined subcategories for this category
+    activeSubcategories.forEach(s => {
+      const name = (s.name_bn || s.name_en || '').trim();
+      if (name && !list.includes(name)) list.push(name);
+    });
+
+    // 2. Previously used subcategories in posts under this category
+    posts
+      .filter(p => p.categoryId === categoryId || p.mainCategory === mainCategory)
+      .forEach(p => {
+        const sub = (p.subCategory || p.subcategoryNameBn || '').trim();
+        if (sub && !list.includes(sub)) list.push(sub);
+      });
+
+    return list;
+  }, [activeSubcategories, categoryId, mainCategory, posts]);
 
   useEffect(() => {
     // 1. Subscribe to Categories
@@ -100,7 +121,7 @@ export const PostsManager: React.FC = () => {
       const data = snapshot.val();
       if (data) {
         const catList: Category[] = Object.values(data);
-        catList.sort((a, b) => a.depth - b.depth || a.order - b.order);
+        catList.sort((a, b) => (a.order || 0) - (b.order || 0));
         setCategories(catList);
         localStorage.setItem('noor_categories', JSON.stringify(catList));
       }
@@ -108,7 +129,21 @@ export const PostsManager: React.FC = () => {
       console.warn('RTDB categories listener:', err);
     });
 
-    // 2. Subscribe to Posts
+    // 2. Subscribe to Subcategories
+    const subsRef = ref(db, 'subcategories');
+    const unsubSubs = onValue(subsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const subList: Subcategory[] = Object.values(data);
+        subList.sort((a, b) => (a.order || 0) - (b.order || 0));
+        setSubcategories(subList);
+        localStorage.setItem('noor_subcategories', JSON.stringify(subList));
+      }
+    }, (err) => {
+      console.warn('RTDB subcategories listener:', err);
+    });
+
+    // 3. Subscribe to Posts
     const postsRef = ref(db, 'posts');
     const unsubPosts = onValue(postsRef, (snapshot) => {
       const data = snapshot.val();
@@ -122,7 +157,7 @@ export const PostsManager: React.FC = () => {
       console.warn('RTDB posts listener:', err);
     });
 
-    return () => { unsubCats(); unsubPosts(); };
+    return () => { unsubCats(); unsubSubs(); unsubPosts(); };
   }, []);
 
   const syncAppDefaultPosts = async (manual = true) => {
@@ -138,6 +173,15 @@ export const PostsManager: React.FC = () => {
       setCategories(Object.values(catMap));
       localStorage.setItem('noor_categories', JSON.stringify(Object.values(catMap)));
 
+      const subMap: Record<string, Subcategory> = {};
+      for (const sub of defaultSubcategories) {
+        const subId = sub.id || `sub_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        subMap[subId] = { ...sub, id: subId, updatedAt: Date.now() };
+      }
+      await set(ref(db, 'subcategories'), subMap);
+      setSubcategories(Object.values(subMap));
+      localStorage.setItem('noor_subcategories', JSON.stringify(Object.values(subMap)));
+
       const postMap: Record<string, Post> = {};
       const postsToSeed = posts.length > 0 ? posts : defaultPosts;
       for (const post of postsToSeed) {
@@ -149,7 +193,7 @@ export const PostsManager: React.FC = () => {
       localStorage.setItem('noor_posts', JSON.stringify(Object.values(postMap)));
 
       if (manual) {
-        setSyncSuccessMsg('অ্যাপের সকল ইসলামিক পোস্ট ও ক্যাটাগরি সফলভাবে ক্লাউড ডাটাবেসে সিঙ্ক করা হয়েছে!');
+        setSyncSuccessMsg('অ্যাপের সকল ক্যাটাগরি, সাব-ক্যাটাগরি ও পোস্ট সফলভাবে ক্লাউড ডাটাবেসে সিঙ্ক করা হয়েছে!');
         setTimeout(() => setSyncSuccessMsg(null), 5000);
       }
     } catch (err: any) {
@@ -167,14 +211,23 @@ export const PostsManager: React.FC = () => {
     setMainArabic('');
     setBanglaTranslation('');
     setBanglaPronunciation('');
-    setMainCategory(categories[0]?.name_bn || categories[0]?.name_en || 'পবিত্র কুরআন');
-    setSubCategory('');
+    const initCatId = categories[0]?.id || 'cat_namaz';
+    const initCat = categories.find(c => c.id === initCatId);
+    setCategoryId(initCatId);
+    setMainCategory(initCat?.name_bn || initCat?.name_en || 'নামাজ ও দোয়ার নিয়ম');
+    
+    const matchingSubs = subcategories.filter(s => s.categoryId === initCatId);
+    if (matchingSubs.length > 0) {
+      setSubcategoryId(matchingSubs[0].id);
+      setSubCategory(matchingSubs[0].name_bn || matchingSubs[0].name_en || '');
+    } else {
+      setSubcategoryId('');
+      setSubCategory('');
+    }
+    
     setIsCustomSubCategory(false);
     setAuthor('');
     setHadithReference('');
-    const firstMain = categories.find(c => !c.parentId);
-    setCategoryId(firstMain?.id || '');
-    setSelectedSubCategoryId(categories.find(c => c.parentId === firstMain?.id)?.id || '');
     setImageUrl('');
     setStatus('published');
     setSelectedFile(null);
@@ -190,16 +243,25 @@ export const PostsManager: React.FC = () => {
     setMainArabic(post.mainArabic || '');
     setBanglaTranslation(post.banglaTranslation || post.body_bn || post.body_en || '');
     setBanglaPronunciation(post.banglaPronunciation || '');
-    setMainCategory(post.mainCategory || '');
-    setSubCategory(post.subCategory || '');
+    const currentCatId = post.categoryId || categories[0]?.id || '';
+    setCategoryId(currentCatId);
+    setMainCategory(post.mainCategory || categories.find(c => c.id === currentCatId)?.name_bn || '');
+
+    // Resolve subcategory ID
+    let subId = post.subcategoryId || '';
+    if (!subId && (post.subCategory || post.subcategoryNameBn)) {
+      const targetName = post.subCategory || post.subcategoryNameBn;
+      const found = subcategories.find(s => 
+        s.categoryId === currentCatId && 
+        (s.name_bn === targetName || s.name_en === targetName)
+      );
+      if (found) subId = found.id;
+    }
+    setSubcategoryId(subId);
+    setSubCategory(post.subCategory || post.subcategoryNameBn || '');
     setIsCustomSubCategory(false);
     setAuthor(post.author || '');
     setHadithReference(post.hadithReference || '');
-    const savedCategory = categories.find(c => c.id === post.categoryId);
-    const savedParent = savedCategory?.parentId ? categories.find(c => c.id === savedCategory.parentId) : undefined;
-    const mainId = savedParent?.id || post.categoryId || categories.find(c => !c.parentId)?.id || '';
-    setCategoryId(mainId);
-    setSelectedSubCategoryId(savedParent ? (savedCategory?.id || '') : (categories.find(c => c.parentId === mainId)?.id || ''));
     setImageUrl(post.imageUrl || '');
     setStatus(post.status);
     setSelectedFile(null);
@@ -272,6 +334,12 @@ export const PostsManager: React.FC = () => {
       const autoEnTitle = generateAutoEnglish(titleBn, 'Daily Islamic Post');
       const autoEnSubtitle = generateAutoEnglish(subtitleBn || titleBn, 'Noor Daily Guidance');
 
+      const catObj = categories.find(c => c.id === categoryId);
+      const subObj = subcategories.find(s => s.id === subcategoryId);
+      const finalSubNameBn = subObj?.name_bn || (isCustomSubCategory ? subCategory.trim() : (editingPost?.subcategoryNameBn || subCategory.trim()));
+      const finalSubNameEn = subObj?.name_en || (isCustomSubCategory ? generateAutoEnglish(subCategory.trim(), 'Islamic Guidance') : (editingPost?.subcategoryNameEn || ''));
+      const finalSubNameAr = subObj?.name_ar || (editingPost?.subcategoryNameAr || '');
+
       const payload: Post = {
         id: postId,
         title_bn: titleBn.trim(),
@@ -281,13 +349,17 @@ export const PostsManager: React.FC = () => {
         mainArabic: mainArabic.trim() || '',
         banglaTranslation: banglaTranslation.trim() || '',
         banglaPronunciation: banglaPronunciation.trim() || '',
-        mainCategory: (categories.find(c => c.id === categoryId)?.name_bn || mainCategory || 'ইসলামিক').trim(),
-        subCategory: (categories.find(c => c.id === selectedSubCategoryId)?.name_bn || subCategory || '').trim(),
+        categoryId: categoryId || categories[0]?.id || 'cat_namaz',
+        mainCategory: catObj?.name_bn || catObj?.name_en || mainCategory.trim() || 'নামাজ ও দোয়ার নিয়ম',
+        subcategoryId: subcategoryId || (subObj?.id || ''),
+        subcategoryNameBn: finalSubNameBn,
+        subcategoryNameEn: finalSubNameEn,
+        subcategoryNameAr: finalSubNameAr,
+        subCategory: finalSubNameBn || subCategory.trim() || '',
         author: author.trim() || '',
         hadithReference: hadithReference.trim() || '',
         body_bn: banglaTranslation.trim() || subtitleBn.trim() || titleBn.trim(),
         body_en: banglaTranslation.trim() || autoEnSubtitle,
-        categoryId: selectedSubCategoryId || categoryId || categories[0]?.id || '',
         imageUrl: finalImageUrl || '',
         status: status || 'published',
         createdAt: editingPost?.createdAt || Date.now(),
@@ -383,8 +455,9 @@ export const PostsManager: React.FC = () => {
 
     const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
     const matchesCategory = categoryFilter === 'all' || post.categoryId === categoryFilter || post.mainCategory === categoryFilter;
+    const matchesSubcategory = subcategoryFilter === 'all' || post.subcategoryId === subcategoryFilter || post.subCategory === subcategoryFilter;
 
-    return matchesSearch && matchesStatus && matchesCategory;
+    return matchesSearch && matchesStatus && matchesCategory && matchesSubcategory;
   });
 
   return (
@@ -441,7 +514,7 @@ export const PostsManager: React.FC = () => {
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as any)}
@@ -454,7 +527,10 @@ export const PostsManager: React.FC = () => {
 
           <select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value);
+              setSubcategoryFilter('all');
+            }}
             className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-300 focus:outline-none focus:border-emerald-500"
           >
             <option value="all">সকল বিভাগ (ক্যাটাগরি)</option>
@@ -462,6 +538,19 @@ export const PostsManager: React.FC = () => {
               <option key={c.id} value={c.id}>{c.name_bn || c.name_en}</option>
             ))}
           </select>
+
+          {categoryFilter !== 'all' && (
+            <select
+              value={subcategoryFilter}
+              onChange={(e) => setSubcategoryFilter(e.target.value)}
+              className="px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-300 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="all">সকল উপ-বিভাগ</option>
+              {subcategories.filter(s => s.categoryId === categoryFilter).map((s) => (
+                <option key={s.id} value={s.id}>{s.name_bn || s.name_en}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -483,6 +572,8 @@ export const PostsManager: React.FC = () => {
         <div className="space-y-4">
           {filteredPosts.map((post) => {
             const cat = categories.find(c => c.id === post.categoryId);
+            const sub = subcategories.find(s => s.id === post.subcategoryId);
+            const subName = sub?.name_bn || post.subcategoryNameBn || post.subCategory;
             return (
               <div 
                 key={post.id} 
@@ -503,6 +594,13 @@ export const PostsManager: React.FC = () => {
                       <span className="px-2.5 py-0.5 bg-slate-800 text-slate-300 rounded-full text-xs font-medium border border-slate-700">
                         বিভাগ: {cat?.name_bn || cat?.name_en || post.mainCategory || 'ইসলামিক'}
                       </span>
+
+                      {subName && (
+                        <span className="px-2.5 py-0.5 bg-teal-950/60 text-teal-300 rounded-full text-xs font-medium border border-teal-800/40 flex items-center gap-1">
+                          <Layers className="w-3 h-3 text-teal-400" />
+                          <span>উপ-বিভাগ: {subName}</span>
+                        </span>
+                      )}
 
                       {post.hadithReference && (
                         <span className="px-2.5 py-0.5 bg-emerald-950/60 text-emerald-300 rounded-full text-xs font-medium border border-emerald-800/40">
@@ -684,26 +782,31 @@ export const PostsManager: React.FC = () => {
                 />
               </div>
 
-              {/* 6. Categories & Status */}
+              {/* 6. Categories & Subcategories */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    মূল বিভাগ (ক্যাটাগরি) <span className="text-emerald-400">*</span>
+                    মূল বিভাগ (Main Category) <span className="text-emerald-400">*</span>
                   </label>
                   <select
                     value={categoryId}
                     onChange={(e) => {
-                      const nextMainId = e.target.value;
-                      setCategoryId(nextMainId);
-                      const cat = categories.find(c => c.id === nextMainId);
+                      const newCatId = e.target.value;
+                      setCategoryId(newCatId);
+                      const cat = categories.find(c => c.id === newCatId);
                       if (cat) setMainCategory(cat.name_bn || cat.name_en);
-                      const firstChild = categories.find(c => c.parentId === nextMainId && c.isActive !== false);
-                      setSelectedSubCategoryId(firstChild?.id || '');
-                      setSubCategory(firstChild?.name_bn || firstChild?.name_en || '');
+                      const matchingSubs = subcategories.filter(s => s.categoryId === newCatId && s.isActive !== false);
+                      if (matchingSubs.length > 0) {
+                        setSubcategoryId(matchingSubs[0].id);
+                        setSubCategory(matchingSubs[0].name_bn || matchingSubs[0].name_en);
+                      } else {
+                        setSubcategoryId('');
+                        setSubCategory('');
+                      }
                     }}
                     className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
                   >
-                    {categories.filter(c => !c.parentId && c.isActive !== false).map((c) => (
+                    {categories.map((c) => (
                       <option key={c.id} value={c.id}>{c.name_bn || c.name_en}</option>
                     ))}
                   </select>
@@ -711,7 +814,7 @@ export const PostsManager: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-semibold text-slate-300">
-                      উপ-বিভাগ (সাব-ক্যাটাগরি - স্ক্রল মেন্যু)
+                      উপ-বিভাগ (Subcategory) <span className="text-emerald-400">*</span>
                     </label>
                     <button
                       type="button"
@@ -721,24 +824,41 @@ export const PostsManager: React.FC = () => {
                       {isCustomSubCategory ? 'তালিকা থেকে পছন্দ করুন' : '+ নতুন লিখুন'}
                     </button>
                   </div>
-                  <select
-                    value={selectedSubCategoryId}
-                    required={availableSubCategories.length > 0}
-                    onChange={(e) => {
-                      const nextId = e.target.value;
-                      setSelectedSubCategoryId(nextId);
-                      const child = categories.find(c => c.id === nextId);
-                      setSubCategory(child?.name_bn || child?.name_en || '');
-                    }}
-                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
-                  >
-                    <option value="">-- সাব-ক্যাটাগরি নির্বাচন করুন --</option>
-                    {availableSubCategories.map((sub) => (
-                      <option key={sub.id} value={sub.id}>{sub.name_bn || sub.name_en}</option>
-                    ))}
-                  </select>
-                  {availableSubCategories.length === 0 && (
-                    <p className="mt-1 text-xs text-amber-300">এই Main Category-র অধীনে আগে Categories Manager থেকে Subcategory তৈরি করুন।</p>
+                  {isCustomSubCategory ? (
+                    <input
+                      type="text"
+                      value={subCategory}
+                      onChange={(e) => setSubCategory(e.target.value)}
+                      placeholder="যেমন: ফজরের নামাজ বা রোজার বিধান"
+                      className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  ) : (
+                    <select
+                      value={subcategoryId}
+                      onChange={(e) => {
+                        if (e.target.value === '__custom__') {
+                          setIsCustomSubCategory(true);
+                          setSubcategoryId('');
+                          setSubCategory('');
+                        } else {
+                          const selectedId = e.target.value;
+                          setSubcategoryId(selectedId);
+                          const subObj = subcategories.find(s => s.id === selectedId);
+                          if (subObj) {
+                            setSubCategory(subObj.name_bn || subObj.name_en);
+                          }
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500 cursor-pointer"
+                    >
+                      <option value="">-- উপ-বিভাগ নির্বাচন করুন --</option>
+                      {activeSubcategories.map((sub) => (
+                        <option key={sub.id} value={sub.id}>
+                          {sub.name_bn || sub.name_en} {sub.name_ar ? `(${sub.name_ar})` : ''}
+                        </option>
+                      ))}
+                      <option value="__custom__">+ অন্য নতুন উপ-বিভাগ লিখুন...</option>
+                    </select>
                   )}
                 </div>
               </div>

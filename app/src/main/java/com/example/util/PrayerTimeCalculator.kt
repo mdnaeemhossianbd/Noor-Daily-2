@@ -17,10 +17,14 @@ object PrayerTimeCalculator {
     val asr: String,
     val maghrib: String,
     val isha: String,
+    val sehriEndTime: String,
+    val iftarTime: String,
     val nextPrayerNameEn: String,
     val nextPrayerNameBn: String,
     val nextPrayerNameAr: String,
     val remainingSecondsToNext: Long,
+    val remainingSecondsToSehri: Long,
+    val remainingSecondsToIftar: Long,
     val activePrayerNameEn: String,
     val activePrayerNameBn: String,
     val activePrayerNameAr: String,
@@ -30,10 +34,17 @@ object PrayerTimeCalculator {
     latitude: Double,
     longitude: Double,
     isHanafi: Boolean = true,
-    calendar: Calendar = Calendar.getInstance()
+    calendar: Calendar? = null,
+    timeZoneId: String? = null
   ): CalculatedPrayerTimes {
-    val dayOfYear = calendar.get(Calendar.DAY_OF_YEAR)
-    val tzOffsetHours = calendar.timeZone.getOffset(calendar.timeInMillis).toDouble() / 3600000.0
+    val cal = when {
+      calendar != null -> calendar
+      timeZoneId != null -> Calendar.getInstance(TimeZone.getTimeZone(timeZoneId))
+      else -> Calendar.getInstance()
+    }
+
+    val dayOfYear = cal.get(Calendar.DAY_OF_YEAR)
+    val tzOffsetHours = cal.timeZone.getOffset(cal.timeInMillis).toDouble() / 3600000.0
 
     // Solar calculation parameters
     val b = 2.0 * Math.PI * (dayOfYear - 81) / 365.0
@@ -57,6 +68,9 @@ object PrayerTimeCalculator {
     val fajrHA = hourAngle(-18.0)
     val fajrHour = solarNoon - fajrHA
 
+    // Sehri end time: 4 minutes cautionary buffer before Fajr / Subh Sadiq
+    val sehriHour = fajrHour - (4.0 / 60.0)
+
     // Sunrise (0.833° below horizon for atmospheric refraction)
     val sunriseHA = hourAngle(-0.833)
     val sunriseHour = solarNoon - sunriseHA
@@ -71,9 +85,10 @@ object PrayerTimeCalculator {
     val asrHA = hourAngle(asrAltDeg)
     val asrHour = solarNoon + asrHA
 
-    // Maghrib (Sunset: 0.833° below horizon)
+    // Maghrib (Sunset: 0.833° below horizon) = Iftar time
     val maghribHA = sunriseHA
     val maghribHour = solarNoon + maghribHA
+    val iftarHour = maghribHour
 
     // Isha (18° below horizon)
     val ishaHA = hourAngle(-18.0)
@@ -99,15 +114,25 @@ object PrayerTimeCalculator {
       return h * 60 + m
     }
 
-    val currentMinutes = calendar.get(Calendar.HOUR_OF_DAY) * 60 + calendar.get(Calendar.MINUTE)
-    val currentSeconds = currentMinutes * 60 + calendar.get(Calendar.SECOND)
+    val currentMinutes = cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+    val currentSeconds = currentMinutes * 60 + cal.get(Calendar.SECOND)
 
     val fajrM = toMinutes(fajrHour)
+    val sehriM = toMinutes(sehriHour)
     val sunriseM = toMinutes(sunriseHour)
     val dhuhrM = toMinutes(dhuhrHour)
     val asrM = toMinutes(asrHour)
     val maghribM = toMinutes(maghribHour)
+    val iftarM = toMinutes(iftarHour)
     val ishaM = toMinutes(ishaHour)
+
+    // Countdown for Sehri
+    val sehriTargetMin = if (currentMinutes < sehriM) sehriM else sehriM + 24 * 60
+    val remainingSecToSehri = (sehriTargetMin * 60L - currentSeconds).coerceAtLeast(0L)
+
+    // Countdown for Iftar
+    val iftarTargetMin = if (currentMinutes < iftarM) iftarM else iftarM + 24 * 60
+    val remainingSecToIftar = (iftarTargetMin * 60L - currentSeconds).coerceAtLeast(0L)
 
     // Determine active and next prayer
     var nextNameEn = "Fajr"
@@ -160,14 +185,42 @@ object PrayerTimeCalculator {
       asr = formatHour(asrHour),
       maghrib = formatHour(maghribHour),
       isha = formatHour(ishaHour),
+      sehriEndTime = formatHour(sehriHour),
+      iftarTime = formatHour(iftarHour),
       nextPrayerNameEn = nextNameEn,
       nextPrayerNameBn = nextNameBn,
       nextPrayerNameAr = nextNameAr,
       remainingSecondsToNext = remainingSec,
+      remainingSecondsToSehri = remainingSecToSehri,
+      remainingSecondsToIftar = remainingSecToIftar,
       activePrayerNameEn = activeNameEn,
       activePrayerNameBn = activeNameBn,
       activePrayerNameAr = activeNameAr,
     )
+  }
+
+  fun getCityLiveTime(timeZoneId: String, currentLang: String = "bn"): String {
+    val tz = TimeZone.getTimeZone(timeZoneId)
+    val cal = Calendar.getInstance(tz)
+    val h = cal.get(Calendar.HOUR_OF_DAY)
+    val m = cal.get(Calendar.MINUTE)
+    val s = cal.get(Calendar.SECOND)
+    val displayH = if (h == 0) 12 else if (h > 12) h - 12 else h
+    val period = if (h < 12) {
+      if (currentLang == "bn") "AM" else "AM"
+    } else {
+      if (currentLang == "bn") "PM" else "PM"
+    }
+    val raw = String.format("%02d:%02d:%02d %s", displayH, m, s, period)
+    return if (currentLang == "bn") {
+      val bnDigits = mapOf(
+        '0' to '০', '1' to '১', '2' to '২', '3' to '৩', '4' to '৪',
+        '5' to '৫', '6' to '৬', '7' to '৭', '8' to '৮', '9' to '৯'
+      )
+      raw.map { bnDigits[it] ?: it }.joinToString("")
+    } else {
+      raw
+    }
   }
 
   data class PrayerAlarmTarget(
