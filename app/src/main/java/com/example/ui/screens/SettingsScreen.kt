@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.ui.theme.AppThemeMode
+import com.example.util.AppStrings
 
 private const val APP_WEBSITE_URL = "https://noordaily.app"
 private const val SUPPORT_EMAIL = "support@noordaily.com"
@@ -86,6 +87,17 @@ fun SettingsScreen(
         Toast.LENGTH_SHORT
       ).show()
     }
+  }
+
+  fun checkExactAlarmAccess(): Boolean {
+    return Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+      (context.getSystemService(Context.ALARM_SERVICE) as? android.app.AlarmManager)?.canScheduleExactAlarms() == true
+  }
+  var hasExactAlarmPermission by remember { mutableStateOf(checkExactAlarmAccess()) }
+  val exactAlarmPermissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.StartActivityForResult()
+  ) {
+    hasExactAlarmPermission = checkExactAlarmAccess()
   }
 
   // Open browser helper safely
@@ -328,6 +340,53 @@ fun SettingsScreen(
               }
             }
           )
+          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+            ListItem(
+              headlineContent = {
+                Text(AppStrings.text(currentLang, "alarms.exact_title"), fontWeight = FontWeight.SemiBold)
+              },
+              supportingContent = {
+                Text(
+                  AppStrings.text(
+                    currentLang,
+                    if (hasExactAlarmPermission) "alarms.exact_enabled" else "alarms.exact_disabled"
+                  )
+                )
+              },
+              leadingContent = {
+                Icon(
+                  Icons.Default.Alarm,
+                  contentDescription = null,
+                  tint = if (hasExactAlarmPermission) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                )
+              },
+              trailingContent = {
+                if (!hasExactAlarmPermission) {
+                  Button(
+                    onClick = {
+                      val requestIntent = Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                      }
+                      try {
+                        exactAlarmPermissionLauncher.launch(requestIntent)
+                      } catch (_: Exception) {
+                        exactAlarmPermissionLauncher.launch(
+                          Intent(
+                            android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.parse("package:${context.packageName}")
+                          )
+                        )
+                      }
+                    },
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                  ) {
+                    Text(AppStrings.text(currentLang, "alarms.exact_open"), fontSize = 11.sp)
+                  }
+                }
+              }
+            )
+          }
           HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
           ListItem(
             headlineContent = {

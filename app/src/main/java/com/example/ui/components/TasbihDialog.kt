@@ -35,7 +35,7 @@ import com.example.ui.theme.IslamicEmeraldDark
 import com.example.ui.theme.IslamicEmeraldPrimary
 import com.example.ui.theme.IslamicGoldAccent
 import com.example.ui.theme.IslamicGoldLight
-import com.example.util.IslamicDateHelper
+import com.example.util.AppStrings
 
 data class TasbihDua(
   val id: String,
@@ -59,6 +59,7 @@ val defaultTasbihDuas = listOf(
 
 @Composable
 fun TasbihDialog(
+  currentLang: String,
   onDismiss: () -> Unit
 ) {
   val context = LocalContext.current
@@ -144,14 +145,14 @@ fun TasbihDialog(
               )
               Spacer(modifier = Modifier.width(8.dp))
               Text(
-                text = "ডিজিটাল তাসবীহ ও জিকির",
+                text = AppStrings.text(currentLang, "tasbih.title"),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
               )
             }
             IconButton(onClick = onDismiss) {
-              Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+              Icon(Icons.Default.Close, contentDescription = AppStrings.text(currentLang, "common.close"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
           }
 
@@ -207,14 +208,15 @@ fun TasbihDialog(
               )
               Spacer(modifier = Modifier.height(4.dp))
               Text(
-                text = selectedDua.meaningBn,
+                text = if (currentLang == "bn") selectedDua.meaningBn
+                  else "${AppStrings.text(currentLang, "tasbih.meaning")}: ${selectedDua.meaningBn}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
               )
               Spacer(modifier = Modifier.height(2.dp))
               Text(
-                text = "টার্গেট: ${IslamicDateHelper.toBengaliDigits(selectedDua.targetCount)} বার • চক্কর সম্পন্ন: ${IslamicDateHelper.toBengaliDigits(loopCount)}",
+                text = "${AppStrings.text(currentLang, "tasbih.target")}: ${AppStrings.digits(currentLang, selectedDua.targetCount)} • ${AppStrings.text(currentLang, "tasbih.completed")}: ${AppStrings.digits(currentLang, loopCount)}",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.secondary
@@ -253,13 +255,13 @@ fun TasbihDialog(
               verticalArrangement = Arrangement.Center
             ) {
               Text(
-                text = IslamicDateHelper.toBengaliDigits(currentCount),
+                text = AppStrings.digits(currentLang, currentCount),
                 fontSize = 48.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.White
               )
               Text(
-                text = "ট্যাপ করুন",
+                text = AppStrings.text(currentLang, "tasbih.tap"),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = IslamicGoldLight
@@ -277,13 +279,13 @@ fun TasbihDialog(
           ) {
             Column {
               Text(
-                text = "মোট জিকির: ${IslamicDateHelper.toBengaliDigits(totalCount)} বার",
+                text = "${AppStrings.text(currentLang, "tasbih.total")}: ${AppStrings.digits(currentLang, totalCount)}",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface
               )
               Text(
-                text = "পবিত্র জিকিরে অন্তর নির্মল হয়",
+                text = AppStrings.text(currentLang, "tasbih.quote"),
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
               )
@@ -296,9 +298,9 @@ fun TasbihDialog(
               },
               colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
             ) {
-              Icon(Icons.Default.Refresh, contentDescription = "Reset", modifier = Modifier.size(16.dp))
+              Icon(Icons.Default.Refresh, contentDescription = AppStrings.text(currentLang, "common.reset"), modifier = Modifier.size(16.dp))
               Spacer(modifier = Modifier.width(4.dp))
-              Text("রিসেট", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+              Text(AppStrings.text(currentLang, "common.reset"), fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
           }
         }
