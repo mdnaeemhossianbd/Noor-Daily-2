@@ -100,7 +100,7 @@ object IslamicDateHelper {
     val j = floor((10985 - l) / 5316) * floor((50 * l) / 17719) + floor(l / 5670) * floor((43 * l) / 15238)
     l = l - floor((30 - j) / 15) * floor((17719 * j) / 50) - floor(j / 16) * floor((15238 * j) / 43) + 29.0
     var hMonth = floor((24 * l) / 709).toInt()
-    val hDay = (l - floor((709 * hMonth) / 24)).toInt().coerceIn(1, 30)
+    val hDay = (l - floor((709.0 * hMonth) / 24.0)).toInt().coerceIn(1, 30)
     val hYear = (30 * n + j - 30).toInt()
 
     if (hMonth > 12) hMonth = 12
