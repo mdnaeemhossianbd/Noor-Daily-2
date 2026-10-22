@@ -88,6 +88,7 @@ object PrayerTimeCalculator {
 
     val method = configuredMethod
     val fajrAngle = when (method) {
+      "Umm al-Qura" -> 18.5
       "Egyptian" -> 19.5
       "ISNA" -> 15.0
       else -> 18.0
