@@ -85,6 +85,15 @@ fun HomeScreen(
     mutableStateOf(LocationAndNotificationHelper.getCurrentDeviceLocation(context))
   }
 
+  // Use cached coordinates immediately, then ask Android for a fresh location fix.
+  LaunchedEffect(hasLocationPermission) {
+    if (hasLocationPermission) {
+      LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+        userLocationInfo = freshLocation
+      }
+    }
+  }
+
   // Live Clock & Hijri Date (Timezone aware)
   var liveTimeText by remember { mutableStateOf(IslamicDateHelper.getLiveTimeString(currentLang)) }
   var cityLiveClockText by remember(isUsingGps, currentSelectedCity, currentLang) {
@@ -368,6 +377,9 @@ fun HomeScreen(
                     )
                   } else {
                     userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+                    LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+                      userLocationInfo = freshLocation
+                    }
                   }
                 },
                 shape = RoundedCornerShape(12.dp),
@@ -1471,6 +1483,11 @@ fun HomeScreen(
       onSelectGps = {
         isUsingGps = true
         userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+        if (hasLocationPermission) {
+          LocationAndNotificationHelper.requestFreshDeviceLocation(context) { freshLocation ->
+            userLocationInfo = freshLocation
+          }
+        }
       },
       onSelectCity = { city ->
         isUsingGps = false
