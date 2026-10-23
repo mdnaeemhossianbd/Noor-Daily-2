@@ -772,14 +772,6 @@ export const PostsManager: React.FC = () => {
                   <label className="block text-xs font-semibold text-sky-300 mb-1.5">Subtitle (English)</label>
                   <input type="text" value={subtitleEn} onChange={(e) => setSubtitleEn(e.target.value)} placeholder="Enter the English subtitle" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-sky-500" />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-emerald-300 mb-1.5">عنوان المنشور (العربية)</label>
-                  <input type="text" dir="rtl" value={titleAr} onChange={(e) => setTitleAr(e.target.value)} placeholder="اكتب عنوان المنشور بالعربية" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-emerald-300 mb-1.5">العنوان الفرعي (العربية)</label>
-                  <input type="text" dir="rtl" value={subtitleAr} onChange={(e) => setSubtitleAr(e.target.value)} placeholder="اكتب العنوان الفرعي بالعربية" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500" />
-                </div>
               </div>
 
               {/* 3. Main Arabic Line */}
@@ -825,15 +817,10 @@ export const PostsManager: React.FC = () => {
                   className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed"
                 />
               </div>
-
-              {/* English and Arabic full post body */}
+              {/* English full post body */}
               <div>
                 <label className="block text-xs font-semibold text-sky-300 mb-1.5">Full post details (English)</label>
                 <textarea value={bodyEn} onChange={(e) => setBodyEn(e.target.value)} rows={4} placeholder="Write the full English translation/explanation here..." className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-sky-500 leading-relaxed" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-emerald-300 mb-1.5">تفاصيل المنشور (العربية)</label>
-                <textarea value={bodyAr} onChange={(e) => setBodyAr(e.target.value)} dir="rtl" rows={4} placeholder="اكتب شرح المنشور باللغة العربية هنا..." className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed" />
               </div>
 
               {/* 6. Categories & Subcategories */}
