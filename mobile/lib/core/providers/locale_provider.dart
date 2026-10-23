@@ -17,7 +17,7 @@ class LocaleProvider extends ChangeNotifier {
     final langCode = prefs.getString('preferred_language') ?? 'en';
     final themeString = prefs.getString('preferred_theme') ?? 'system';
 
-    _locale = Locale(langCode);
+    _locale = Locale(langCode == 'bn' ? 'bn' : 'en');
 
     switch (themeString) {
       case 'light':
@@ -34,7 +34,7 @@ class LocaleProvider extends ChangeNotifier {
   }
 
   Future<void> setLocale(String langCode) async {
-    if (!['en', 'bn', 'ar'].contains(langCode)) return;
+    if (!['en', 'bn'].contains(langCode)) return;
     _locale = Locale(langCode);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('preferred_language', langCode);
