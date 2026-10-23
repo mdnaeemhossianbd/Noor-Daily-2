@@ -5,16 +5,20 @@ import { db } from '../api/firebase';
 import { 
   FileText, FolderTree, CheckCircle, Clock, PlusCircle, ExternalLink, ShieldAlert, TrendingUp, RefreshCw, Sparkles, HelpCircle, Calendar
 } from 'lucide-react';
-import { AuditLog } from '../types/schema';
+import { AuditLog, Post, Category } from '../types/schema';
 import { 
   getInitialPosts, 
   getInitialCategories, 
   syncAllAppContentToFirestore 
 } from '../api/firestoreService';
+import { IslamicAnalyticsWidget } from '../components/IslamicAnalyticsWidget';
 
 export const Dashboard: React.FC = () => {
   const initialPosts = getInitialPosts();
   const initialCategories = getInitialCategories();
+
+  const [postsList, setPostsList] = useState<Post[]>(initialPosts);
+  const [categoriesList, setCategoriesList] = useState<Category[]>(initialCategories);
 
   const [stats, setStats] = useState({ 
     totalPosts: initialPosts.length, 
@@ -34,13 +38,17 @@ export const Dashboard: React.FC = () => {
       const data = snapshot.val();
       if (data) {
         let total = 0, published = 0, draft = 0;
-        const postsList = Object.values(data) as any[];
-        total = postsList.length;
-        postsList.forEach(post => {
+        const fetchedPosts: Post[] = Object.entries(data).map(([id, val]: [string, any]) => ({
+          id,
+          ...val
+        }));
+        total = fetchedPosts.length;
+        fetchedPosts.forEach(post => {
           if (post.status === 'published') published++;
           else draft++;
         });
         setStats(prev => ({ ...prev, totalPosts: total, publishedPosts: published, draftPosts: draft }));
+        setPostsList(fetchedPosts);
       }
     }, (err) => {
       console.warn('RTDB posts listener note:', err);
@@ -51,7 +59,12 @@ export const Dashboard: React.FC = () => {
     const unsubCats = onValue(catsRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
+        const fetchedCats: Category[] = Object.entries(data).map(([id, val]: [string, any]) => ({
+          id,
+          ...val
+        }));
         setStats(prev => ({ ...prev, totalCategories: Object.keys(data).length }));
+        setCategoriesList(fetchedCats);
       }
     }, (err) => {
       console.warn('RTDB categories listener note:', err);
@@ -188,6 +201,9 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Islamic Analytics & Recharts Visualization: Prayer Times Distribution & User Engagement Metrics */}
+      <IslamicAnalyticsWidget posts={postsList} categories={categoriesList} />
 
       {/* Navigation Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
