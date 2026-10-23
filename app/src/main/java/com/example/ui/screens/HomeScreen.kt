@@ -125,7 +125,10 @@ fun HomeScreen(
   } else {
     java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(currentSelectedCity.timeZoneId))
   }
-  val (gregFormatted, hijriFormatted) = IslamicDateHelper.getFormattedDates(currentLang, dateCalendar)
+  // Keep the Gregorian date in English and the Hijri month in Arabic in every app language.
+  val gregFormatted = IslamicDateHelper.getEnglishIntlDate(dateCalendar)
+  val hijriDate = IslamicDateHelper.getHijriDate(dateCalendar)
+  val hijriFormatted = "${hijriDate.day} ${hijriDate.monthNameAr} ${hijriDate.year} هـ"
   val banglaSolarDate = IslamicDateHelper.getBanglaSolarDate(dateCalendar)
 
   // Notification Permission State
