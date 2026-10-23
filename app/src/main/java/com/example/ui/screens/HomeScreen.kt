@@ -1595,8 +1595,6 @@ fun HomeScreen(
         }
       }
     }
-  }
-
     item {
       com.example.util.BannerAdView(modifier = Modifier.fillMaxWidth())
     }
