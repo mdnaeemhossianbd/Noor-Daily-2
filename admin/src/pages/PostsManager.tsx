@@ -72,6 +72,12 @@ export const PostsManager: React.FC = () => {
   // Form Fields - All in Bengali
   const [titleBn, setTitleBn] = useState('');
   const [subtitleBn, setSubtitleBn] = useState('');
+  const [titleEn, setTitleEn] = useState('');
+  const [subtitleEn, setSubtitleEn] = useState('');
+  const [titleAr, setTitleAr] = useState('');
+  const [subtitleAr, setSubtitleAr] = useState('');
+  const [bodyEn, setBodyEn] = useState('');
+  const [bodyAr, setBodyAr] = useState('');
   const [mainArabic, setMainArabic] = useState('');
   const [banglaTranslation, setBanglaTranslation] = useState('');
   const [banglaPronunciation, setBanglaPronunciation] = useState('');
@@ -209,6 +215,12 @@ export const PostsManager: React.FC = () => {
     setEditingPost(null);
     setTitleBn('');
     setSubtitleBn('');
+    setTitleEn('');
+    setSubtitleEn('');
+    setTitleAr('');
+    setSubtitleAr('');
+    setBodyEn('');
+    setBodyAr('');
     setMainArabic('');
     setBanglaTranslation('');
     setBanglaPronunciation('');
@@ -239,10 +251,18 @@ export const PostsManager: React.FC = () => {
 
   const openEditModal = (post: Post) => {
     setEditingPost(post);
-    setTitleBn(post.title_bn || post.title_en || '');
-    setSubtitleBn(post.subtitle_bn || post.subtitle_en || '');
+    setTitleBn(post.title_bn || '');
+    setSubtitleBn(post.subtitle_bn || '');
+    // Older versions accidentally saved Bangla text in English fields; don't copy it forward.
+    const hasBangla = (value?: string) => /[\u0980-\u09FF]/.test(value || '');
+    setTitleEn(hasBangla(post.title_en) ? '' : (post.title_en || ''));
+    setSubtitleEn(hasBangla(post.subtitle_en) ? '' : (post.subtitle_en || ''));
+    setTitleAr(post.title_ar || '');
+    setSubtitleAr(post.subtitle_ar || '');
+    setBodyEn(hasBangla(post.body_en) ? '' : (post.body_en || ''));
+    setBodyAr(post.body_ar || '');
     setMainArabic(post.mainArabic || '');
-    setBanglaTranslation(post.banglaTranslation || post.body_bn || post.body_en || '');
+    setBanglaTranslation(post.banglaTranslation || post.body_bn || '');
     setBanglaPronunciation(post.banglaPronunciation || '');
     const currentCatId = post.categoryId || categories[0]?.id || '';
     setCategoryId(currentCatId);
@@ -331,9 +351,9 @@ export const PostsManager: React.FC = () => {
 
       const postId = editingPost?.id || `post_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       
-      // Auto English Generation
-      const autoEnTitle = generateAutoEnglish(titleBn, 'Daily Islamic Post');
-      const autoEnSubtitle = generateAutoEnglish(subtitleBn || titleBn, 'Noor Daily Guidance');
+      // Keep each language independent. English is never populated with Bangla text.
+      const finalTitleEn = titleEn.trim();
+      const finalSubtitleEn = subtitleEn.trim();
 
       const catObj = categories.find(c => c.id === categoryId);
       const subObj = subcategories.find(s => s.id === subcategoryId);
@@ -344,9 +364,11 @@ export const PostsManager: React.FC = () => {
       const payload: Post = {
         id: postId,
         title_bn: titleBn.trim(),
-        title_en: autoEnTitle, // Auto generated English title
+        title_en: finalTitleEn,
+        title_ar: titleAr.trim(),
         subtitle_bn: subtitleBn.trim() || '',
-        subtitle_en: autoEnSubtitle, // Auto generated English subtitle
+        subtitle_en: finalSubtitleEn,
+        subtitle_ar: subtitleAr.trim(),
         mainArabic: mainArabic.trim() || '',
         banglaTranslation: banglaTranslation.trim() || '',
         banglaPronunciation: banglaPronunciation.trim() || '',
@@ -360,7 +382,8 @@ export const PostsManager: React.FC = () => {
         author: author.trim() || '',
         hadithReference: hadithReference.trim() || '',
         body_bn: banglaTranslation.trim() || subtitleBn.trim() || titleBn.trim(),
-        body_en: banglaTranslation.trim() || autoEnSubtitle,
+        body_en: bodyEn.trim(),
+        body_ar: bodyAr.trim() || mainArabic.trim(),
         imageUrl: finalImageUrl || '',
         status: status || 'published',
         createdAt: editingPost?.createdAt || Date.now(),
@@ -712,8 +735,8 @@ export const PostsManager: React.FC = () => {
               {/* 1. Bangla Title */}
               <div>
                 <label className="block text-xs font-semibold text-slate-200 mb-1.5 flex items-center justify-between">
-                  <span>পোস্টের শিরোনাম (বাংলায় লিখুন) <span className="text-emerald-400">*</span></span>
-                  <span className="text-[11px] text-emerald-400 font-normal">ইংরেজি স্বয়ংক্রিয়ভাবে তৈরি হবে</span>
+                  <span>পোস্টের শিরোনাম (বাংলা) <span className="text-emerald-400">*</span></span>
+                  <span className="text-[11px] text-slate-400 font-normal">প্রতিটি ভাষার লেখা আলাদা করে দিন</span>
                 </label>
                 <input
                   type="text"
@@ -737,6 +760,26 @@ export const PostsManager: React.FC = () => {
                   placeholder="যেমন: আল্লাহ কোনো ব্যক্তির উপর সাধ্যাতীত বোঝা চাপান না।"
                   className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              {/* English and Arabic title/subtitle translations */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-sky-300 mb-1.5">Post title (English)</label>
+                  <input type="text" value={titleEn} onChange={(e) => setTitleEn(e.target.value)} placeholder="Enter the English title" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-sky-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-sky-300 mb-1.5">Subtitle (English)</label>
+                  <input type="text" value={subtitleEn} onChange={(e) => setSubtitleEn(e.target.value)} placeholder="Enter the English subtitle" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-sky-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-emerald-300 mb-1.5">عنوان المنشور (العربية)</label>
+                  <input type="text" dir="rtl" value={titleAr} onChange={(e) => setTitleAr(e.target.value)} placeholder="اكتب عنوان المنشور بالعربية" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-emerald-300 mb-1.5">العنوان الفرعي (العربية)</label>
+                  <input type="text" dir="rtl" value={subtitleAr} onChange={(e) => setSubtitleAr(e.target.value)} placeholder="اكتب العنوان الفرعي بالعربية" className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-white focus:outline-none focus:border-emerald-500" />
+                </div>
               </div>
 
               {/* 3. Main Arabic Line */}
@@ -781,6 +824,16 @@ export const PostsManager: React.FC = () => {
                   placeholder="বাংলা অনুবাদ ও ফজিলত বা তাফসির বিস্তারিত লিখুন..."
                   className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed"
                 />
+              </div>
+
+              {/* English and Arabic full post body */}
+              <div>
+                <label className="block text-xs font-semibold text-sky-300 mb-1.5">Full post details (English)</label>
+                <textarea value={bodyEn} onChange={(e) => setBodyEn(e.target.value)} rows={4} placeholder="Write the full English translation/explanation here..." className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-sky-500 leading-relaxed" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-emerald-300 mb-1.5">تفاصيل المنشور (العربية)</label>
+                <textarea value={bodyAr} onChange={(e) => setBodyAr(e.target.value)} dir="rtl" rows={4} placeholder="اكتب شرح المنشور باللغة العربية هنا..." className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-200 focus:outline-none focus:border-emerald-500 leading-relaxed" />
               </div>
 
               {/* 6. Categories & Subcategories */}
