@@ -6,12 +6,12 @@ import {
   FileText, FolderTree, CheckCircle, Clock, PlusCircle, ExternalLink, ShieldAlert, TrendingUp, RefreshCw, Sparkles, HelpCircle, Calendar
 } from 'lucide-react';
 import { AuditLog, Post, Category } from '../types/schema';
-import { 
-  getInitialPosts, 
+import { getInitialPosts, 
   getInitialCategories, 
   syncAllAppContentToFirestore 
 } from '../api/firestoreService';
 import { IslamicAnalyticsWidget } from '../components/IslamicAnalyticsWidget';
+import { RecentActivityFeed } from '../components/RecentActivityFeed';
 
 export const Dashboard: React.FC = () => {
   const initialPosts = getInitialPosts();
@@ -262,33 +262,8 @@ export const Dashboard: React.FC = () => {
         </Link>
       </div>
 
-      {/* Recent Audit Logs */}
-      <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-6 shadow-xl space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Clock className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-base font-bold text-white">সাম্প্রতিক অ্যাডমিন কার্যকলাপ (Activity Audit)</h2>
-          </div>
-        </div>
-
-        {recentLogs.length === 0 ? (
-          <p className="text-xs text-slate-500 italic py-4">এখনো কোনো কার্যকলাপ রেকর্ড হয়নি।</p>
-        ) : (
-          <div className="divide-y divide-slate-800/80">
-            {recentLogs.map((log) => (
-              <div key={log.id} className="py-3 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-semibold text-emerald-300">{log.action}: </span>
-                  <span className="text-slate-300">{log.details}</span>
-                </div>
-                <div className="text-slate-500 text-[11px] whitespace-nowrap ml-4">
-                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Recent Activity Feed */}
+      <RecentActivityFeed logs={recentLogs} posts={postsList} />
     </div>
   );
 };

@@ -1159,7 +1159,7 @@ fun HomeScreen(
     item {
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
       ) {
         // Tool 1: Digital Tasbih
         Card(
@@ -1171,37 +1171,39 @@ fun HomeScreen(
             .clickable { showTasbihDialog = true }
         ) {
           Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
             Box(
               modifier = Modifier
-                .size(42.dp)
+                .size(40.dp)
                 .background(MaterialTheme.colorScheme.primary, CircleShape),
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Default.TouchApp, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+              Icon(Icons.Default.TouchApp, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
               text = when (currentLang) {
                 "bn" -> "ডিজিটাল তাসবীহ"
-                "ar" -> "السبحة الإلكترونية"
-                else -> "Digital Tasbih"
+                "ar" -> "السبحة"
+                else -> "Tasbih"
               },
-              fontSize = 12.sp,
+              fontSize = 11.sp,
               fontWeight = FontWeight.Bold,
               color = MaterialTheme.colorScheme.onSurface,
-              textAlign = TextAlign.Center
+              textAlign = TextAlign.Center,
+              maxLines = 1
             )
             Text(
               text = when (currentLang) {
                 "bn" -> "দোয়া ও জিকির"
-                "ar" -> "الأذكار والأدعية"
-                else -> "Dua & Dhikr"
+                "ar" -> "الأذكار"
+                else -> "Dhikr"
               },
-              fontSize = 10.sp,
-              color = MaterialTheme.colorScheme.primary
+              fontSize = 9.sp,
+              color = MaterialTheme.colorScheme.primary,
+              maxLines = 1
             )
           }
         }
@@ -1216,37 +1218,39 @@ fun HomeScreen(
             .clickable { showNamesOfAllahDialog = true }
         ) {
           Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
             Box(
               modifier = Modifier
-                .size(42.dp)
+                .size(40.dp)
                 .background(IslamicEmeraldPrimary, CircleShape),
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Default.Star, contentDescription = null, tint = IslamicGoldAccent, modifier = Modifier.size(22.dp))
+              Icon(Icons.Default.Star, contentDescription = null, tint = IslamicGoldAccent, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
               text = when (currentLang) {
                 "bn" -> "আল্লাহর ৯৯ নাম"
-                "ar" -> "أسماء الله الحسنى"
+                "ar" -> "الأسماء الحسنى"
                 else -> "99 Names"
               },
-              fontSize = 12.sp,
+              fontSize = 11.sp,
               fontWeight = FontWeight.Bold,
               color = MaterialTheme.colorScheme.onSurface,
-              textAlign = TextAlign.Center
+              textAlign = TextAlign.Center,
+              maxLines = 1
             )
             Text(
               text = when (currentLang) {
                 "bn" -> "আসমাউল হুসনা"
-                "ar" -> "الأسماء الحسنى"
-                else -> "Asmaul Husna"
+                "ar" -> "الصفات"
+                else -> "Names"
               },
-              fontSize = 10.sp,
-              color = MaterialTheme.colorScheme.primary
+              fontSize = 9.sp,
+              color = MaterialTheme.colorScheme.primary,
+              maxLines = 1
             )
           }
         }
@@ -1261,37 +1265,86 @@ fun HomeScreen(
             .clickable { showIslamicCalendarDialog = true }
         ) {
           Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
           ) {
             Box(
               modifier = Modifier
-                .size(42.dp)
+                .size(40.dp)
                 .background(MaterialTheme.colorScheme.secondary, CircleShape),
               contentAlignment = Alignment.Center
             ) {
-              Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Black, modifier = Modifier.size(22.dp))
+              Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
               text = when (currentLang) {
                 "bn" -> "হিজরি ক্যালেন্ডার"
-                "ar" -> "التقويم الهجري"
+                "ar" -> "التقويم"
                 else -> "Calendar"
               },
-              fontSize = 12.sp,
+              fontSize = 11.sp,
               fontWeight = FontWeight.Bold,
               color = MaterialTheme.colorScheme.onSurface,
-              textAlign = TextAlign.Center
+              textAlign = TextAlign.Center,
+              maxLines = 1
             )
             Text(
               text = when (currentLang) {
                 "bn" -> "ইসলামিক দিবস"
                 "ar" -> "المناسبات"
-                else -> "Islamic Events"
+                else -> "Events"
               },
-              fontSize = 10.sp,
-              color = MaterialTheme.colorScheme.primary
+              fontSize = 9.sp,
+              color = MaterialTheme.colorScheme.primary,
+              maxLines = 1
+            )
+          }
+        }
+
+        // Tool 4: Qibla Compass
+        Card(
+          shape = RoundedCornerShape(16.dp),
+          colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+          border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+          modifier = Modifier
+            .weight(1f)
+            .clickable { onNavigateToQibla() }
+        ) {
+          Column(
+            modifier = Modifier.padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Box(
+              modifier = Modifier
+                .size(40.dp)
+                .background(Color(0xFF10B981), CircleShape),
+              contentAlignment = Alignment.Center
+            ) {
+              Icon(Icons.Default.Explore, contentDescription = "Qibla", tint = Color.White, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+              text = when (currentLang) {
+                "bn" -> "কিবলা কম্পাস"
+                "ar" -> "بوصلة القبلة"
+                else -> "Qibla"
+              },
+              fontSize = 11.sp,
+              fontWeight = FontWeight.Bold,
+              color = MaterialTheme.colorScheme.onSurface,
+              textAlign = TextAlign.Center,
+              maxLines = 1
+            )
+            Text(
+              text = when (currentLang) {
+                "bn" -> "মক্কার দিক"
+                "ar" -> "مكة المكرمة"
+                else -> "Direction"
+              },
+              fontSize = 9.sp,
+              color = MaterialTheme.colorScheme.primary,
+              maxLines = 1
             )
           }
         }
