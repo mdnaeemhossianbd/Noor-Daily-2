@@ -34,6 +34,7 @@ import com.example.ui.screens.*
 import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.IslamicEmeraldPrimary
 import com.example.ui.theme.NoorDailyTheme
+import com.example.util.AdMobManager
 import com.example.util.LocationAndNotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -44,6 +45,7 @@ enum class NoorTab {
   HOME,
   CATEGORIES,
   PRAYERS,
+  QIBLA,
   SAVED,
   SETTINGS,
 }
@@ -53,6 +55,7 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
     LocationAndNotificationHelper.initNotificationChannel(this)
+    AdMobManager.initialize(this)
     com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(this)
 
     setContent {
@@ -268,6 +271,27 @@ class MainActivity : ComponentActivity() {
               )
 
               NavigationBarItem(
+                selected = currentTab == NoorTab.QIBLA,
+                onClick = { currentTab = NoorTab.QIBLA },
+                icon = {
+                  Icon(
+                    if (currentTab == NoorTab.QIBLA) Icons.Filled.Explore else Icons.Outlined.Explore,
+                    contentDescription = "Qibla"
+                  )
+                },
+                label = {
+                  Text(
+                    when (currentLang) {
+                      "bn" -> "কিবলা"
+                      "ar" -> "القبلة"
+                      else -> "Qibla"
+                    },
+                    fontSize = 11.sp
+                  )
+                }
+              )
+
+              NavigationBarItem(
                 selected = currentTab == NoorTab.SAVED,
                 onClick = { currentTab = NoorTab.SAVED },
                 icon = {
@@ -325,7 +349,11 @@ class MainActivity : ComponentActivity() {
                 onCitySelected = { selectedCity = it },
                 onMadhhabToggled = { isHanafi = it },
                 onPostClick = { activePost = it },
-                onNavigateToCategories = { currentTab = NoorTab.CATEGORIES }
+                onNavigateToCategories = {
+                  (this@MainActivity as android.app.Activity).let { AdMobManager.showInterstitialIfEligible(it) }
+                  currentTab = NoorTab.CATEGORIES
+                },
+                onNavigateToQibla = { currentTab = NoorTab.QIBLA }
               )
 
               NoorTab.CATEGORIES -> CategoriesScreen(
@@ -340,6 +368,8 @@ class MainActivity : ComponentActivity() {
                 onCitySelected = { selectedCity = it },
                 onMadhhabToggled = { isHanafi = it }
               )
+
+              NoorTab.QIBLA -> QiblaCompassScreen(currentLang = currentLang)
 
               NoorTab.SAVED -> SavedScreen(
                 currentLang = currentLang,
