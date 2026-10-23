@@ -62,6 +62,7 @@ fun HomeScreen(
   onMadhhabToggled: (Boolean) -> Unit,
   onPostClick: (IslamicPost) -> Unit,
   onNavigateToCategories: () -> Unit,
+  onNavigateToQibla: () -> Unit,
 ) {
   val context = LocalContext.current
   val currentPosts = SampleIslamicData.posts
@@ -830,6 +831,33 @@ fun HomeScreen(
       }
     }
 
+    // Qibla compass preview and dedicated screen shortcut
+    item {
+      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        QiblaCompassPanel(
+          currentLang = currentLang,
+          latitude = activeLat,
+          longitude = activeLng,
+          compact = true,
+          locationLabel = null
+        )
+        OutlinedButton(
+          onClick = onNavigateToQibla,
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Icon(Icons.Default.Explore, contentDescription = null)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text(
+            when (currentLang) {
+              "bn" -> "সম্পূর্ণ কিবলা কম্পাস খুলুন"
+              "ar" -> "افتح بوصلة القبلة"
+              else -> "Open Full Qibla Compass"
+            }
+          )
+        }
+      }
+    }
+
     // SECTION 2: Prayer Times Single Line Grid (এক লাইনে সব, রানিং ওয়াক্ত মাঝে ফোকাসে)
     item {
       Card(
@@ -1481,6 +1509,10 @@ fun HomeScreen(
           Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
       }
+    }
+
+    item {
+      com.example.util.BannerAdView(modifier = Modifier.fillMaxWidth())
     }
   }
 
