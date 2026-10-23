@@ -55,7 +55,6 @@ class NoorDailyApp extends StatelessWidget {
       supportedLocales: const [
         Locale('en', ''),
         Locale('bn', ''),
-        Locale('ar', ''),
       ],
       localizationsDelegates: const [
         AppLocalizationsDelegate(),

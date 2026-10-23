@@ -69,35 +69,6 @@ class AppLocalizations {
       'retry': 'আবার চেষ্টা করুন',
       'search_articles': 'ইসলামিক কনটেন্ট অনুসন্ধান...',
     },
-    'ar': {
-      'app_name': 'نور ديلي',
-      'nav_home': 'الرئيسية',
-      'nav_categories': 'الأقسام',
-      'nav_prayer_times': 'أوقات الصلاة',
-      'nav_saved': 'المحفوظات',
-      'nav_settings': 'الإعدادات',
-      'daily_ayat_title': 'آية اليوم',
-      'daily_hadith_title': 'حديث اليوم',
-      'read_more': 'اقرأ المقال',
-      'latest_posts': 'أحدث المقالات الإسلامية',
-      'no_posts_found': 'لا توجد مقالات متاحة حالياً.',
-      'next_prayer': 'الصلاة القادمة',
-      'categories_title': 'استكشف الموضوعات',
-      'all_categories': 'جميع الأقسام',
-      'saved_posts_title': 'المقالات المحفوظة',
-      'no_saved_posts': 'لم تقم بحفظ أي مقال حتى الآن.',
-      'settings_title': 'التفضيلات',
-      'language': 'اللغة',
-      'theme_mode': 'المظهر',
-      'light_theme': 'الوضع النهاري',
-      'dark_theme': 'الوضع الليلي',
-      'system_theme': 'تلقائي حسب النظام',
-      'about_app': 'عن تطبيق نور ديلي',
-      'about_description': 'تطبيق إسلامي شامل يقدم القرآن الكريم والأحاديث النبوية وأوقات الصلاة والأدعية المأثورة.',
-      'pull_to_refresh': 'اسحب لأسفل للتحديث',
-      'retry': 'إعادة المحاولة',
-      'search_articles': 'بحث في المحتوى الإسلامي...',
-    },
   };
 
   String translate(String key) {
@@ -105,14 +76,14 @@ class AppLocalizations {
     return _localizedValues[lang]?[key] ?? _localizedValues['en']?[key] ?? key;
   }
 
-  bool get isRtl => locale.languageCode == 'ar';
+  bool get isRtl => false;
 }
 
 class AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) => ['en', 'bn', 'ar'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => ['en', 'bn'].contains(locale.languageCode);
 
   @override
   Future<AppLocalizations> load(Locale locale) async {
