@@ -311,8 +311,8 @@ fun CategoriesScreen(
   }
 
   // Dialog implementations
-  if (showTasbihDialog) TasbihDialog(onDismiss = { showTasbihDialog = false })
-  if (showNamesOfAllahDialog) NamesOfAllahDialog(onDismiss = { showNamesOfAllahDialog = false })
+  if (showTasbihDialog) TasbihDialog(currentLang = currentLang, onDismiss = { showTasbihDialog = false })
+  if (showNamesOfAllahDialog) NamesOfAllahDialog(currentLang = currentLang, onDismiss = { showNamesOfAllahDialog = false })
   if (showIslamicCalendarDialog) IslamicCalendarDialog(currentLang = currentLang, onDismiss = { showIslamicCalendarDialog = false })
   if (showIslamicQuizDialog) IslamicQuizDialog(currentLang = currentLang, onDismiss = { showIslamicQuizDialog = false })
 }
