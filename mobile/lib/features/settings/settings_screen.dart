@@ -44,16 +44,6 @@ class SettingsScreen extends StatelessWidget {
                     if (val != null) localeProvider.setLocale(val);
                   },
                 ),
-                const Divider(height: 1),
-                _buildRadioTile(
-                  title: 'العربية (Arabic)',
-                  subtitle: 'اللغة العربية مع محاذاة النص لليمين',
-                  value: 'ar',
-                  groupValue: currentLang,
-                  onChanged: (val) {
-                    if (val != null) localeProvider.setLocale(val);
-                  },
-                ),
               ],
             ),
           ),
