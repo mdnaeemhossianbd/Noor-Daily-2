@@ -126,7 +126,10 @@ fun HomeScreen(
   } else {
     java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(currentSelectedCity.timeZoneId))
   }
-  val (gregFormatted, hijriFormatted) = IslamicDateHelper.getFormattedDates(currentLang, dateCalendar)
+  // Keep the Gregorian date in English and the Hijri month in Arabic in every app language.
+  val gregFormatted = IslamicDateHelper.getEnglishIntlDate(dateCalendar)
+  val hijriDate = IslamicDateHelper.getHijriDate(dateCalendar)
+  val hijriFormatted = "${hijriDate.day} ${hijriDate.monthNameAr} ${hijriDate.year} هـ"
   val banglaSolarDate = IslamicDateHelper.getBanglaSolarDate(dateCalendar)
 
   // Notification Permission State
@@ -213,13 +216,25 @@ fun HomeScreen(
   val activeLng = if (isUsingGps) userLocationInfo.longitude else currentSelectedCity.longitude
   val activeTz = if (isUsingGps) null else currentSelectedCity.timeZoneId
 
-  // Live Dynamic Prayer Times Calculation based on user location coordinates and timezone
-  var prayerCalculation by remember(activeLat, activeLng, isHanafi, activeTz) {
+  // Recalculate when location, madhhab, admin calculation settings, or local calendar day changes.
+  // The day key matters after midnight: the previous day's cached result must not remain on screen.
+  val prayerCalendar = if (activeTz.isNullOrBlank()) {
+    java.util.Calendar.getInstance()
+  } else {
+    java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(activeTz))
+  }
+  val prayerDateKey = "${prayerCalendar.get(java.util.Calendar.YEAR)}-${prayerCalendar.get(java.util.Calendar.DAY_OF_YEAR)}"
+  val prayerSettingsRevision = PrayerTimeCalculator.settingsRevision
+
+  var prayerCalculation by remember(
+    activeLat, activeLng, isHanafi, activeTz, prayerDateKey, prayerSettingsRevision
+  ) {
     mutableStateOf(
       PrayerTimeCalculator.calculate(
         latitude = activeLat,
         longitude = activeLng,
         isHanafi = isHanafi,
+        calendar = prayerCalendar,
         timeZoneId = activeTz
       )
     )
@@ -246,10 +261,16 @@ fun HomeScreen(
         secondsRemaining--
       } else {
         // AlarmManager/foreground service owns scheduled playback; avoid a duplicate in-screen player.
+        val refreshedCalendar = if (activeTz.isNullOrBlank()) {
+          java.util.Calendar.getInstance()
+        } else {
+          java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone(activeTz))
+        }
         prayerCalculation = PrayerTimeCalculator.calculate(
           latitude = activeLat,
           longitude = activeLng,
           isHanafi = isHanafi,
+          calendar = refreshedCalendar,
           timeZoneId = activeTz
         )
       }
@@ -297,8 +318,8 @@ fun HomeScreen(
     modifier = Modifier
       .fillMaxSize()
       .padding(horizontal = 16.dp),
-    verticalArrangement = Arrangement.spacedBy(16.dp),
-    contentPadding = PaddingValues(top = 16.dp, bottom = 40.dp)
+    verticalArrangement = Arrangement.spacedBy(12.dp),
+    contentPadding = PaddingValues(top = 12.dp, bottom = 32.dp)
   ) {
 
     // SECTION 1: Address Bar with Auto Live Time, Date, Month, Day Name & Arabic (Hijri) Date
