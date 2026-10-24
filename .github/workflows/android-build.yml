@@ -86,6 +86,20 @@ jobs:
             echo "::warning::No Firebase Android config supplied; building with the configured missing-google-services warning strategy."
           fi
 
+      - name: Create local debug keystore
+        run: |
+          if [ ! -f "$GITHUB_WORKSPACE/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$GITHUB_WORKSPACE/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace
 
