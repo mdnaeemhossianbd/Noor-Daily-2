@@ -1,35 +1,45 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Allow full read/write for all content collections so admin panel and mobile app always sync smoothly
-    match /categories/{categoryId} {
-      allow read, write: if true;
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email in ['habitsk50@gmail.com', 'admin@noordaily.com'];
     }
 
-    match /posts/{postId} {
-      allow read, write: if true;
+    // Public app content can be read by users; only signed-in administrators can change it.
+    match /categories/{documentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /posts/{documentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /quizzes/{documentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /calendar_events/{documentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /app_config/{documentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+    match /prayer_settings/{documentId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
-    match /quizzes/{quizId} {
-      allow read, write: if true;
+    // Audit logs are private to authorized administrators.
+    match /audit_logs/{documentId} {
+      allow read, write: if isAdmin();
     }
 
-    match /calendar_events/{eventId} {
-      allow read, write: if true;
-    }
-
-    match /app_config/{configId} {
-      allow read, write: if true;
-    }
-
-    match /audit_logs/{logId} {
-      allow read, write: if true;
-    }
-
-    // Default match for any subcollections
+    // Deny everything not explicitly allowed above.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
