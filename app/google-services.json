@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "585883427862",
+    "firebase_url": "https://gen-lang-client-0048418625-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "gen-lang-client-0048418625",
+    "storage_bucket": "gen-lang-client-0048418625.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:585883427862:android:f77a33c18bc7c316ac0137",
+        "android_client_info": {
+          "package_name": "com.aistudio.noordaily.qvxprm"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "585883427862-p07pn57d1oi8v6njdrvtgoemi18resdp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.noordaily.qvxprm",
+            "certificate_hash": "6dfa20f856f003745ee4c46123eec383f156692f"
+          }
+        },
+        {
+          "client_id": "585883427862-vmaj14vbna02uhaia2nt9djccqcd0998.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB16zMcqdcnfbkPRjOmmRmeJZMwalVlBMU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "585883427862-vmaj14vbna02uhaia2nt9djccqcd0998.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
