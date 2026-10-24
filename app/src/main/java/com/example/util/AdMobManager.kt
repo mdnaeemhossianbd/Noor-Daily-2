@@ -35,9 +35,8 @@ object AdMobManager {
   const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-6596350151078116/9629838690"
   const val REWARDED_AD_UNIT_ID = "ca-app-pub-6596350151078116/2848807925"
   const val NATIVE_ADVANCED_AD_UNIT_ID = "ca-app-pub-6596350151078116/4193102198"
-  // No production Banner unit ID was supplied; use Google's test unit until one is created.
-  // Create a real Banner Ad Unit in AdMob and replace this before publishing.
-  const val BANNER_AD_UNIT_ID = "REPLACE_WITH_YOUR_BANNER_AD_UNIT_ID"
+  // Production Banner Ad Unit ID supplied by the user.
+  const val BANNER_AD_UNIT_ID = "ca-app-pub-6596350151078116/6135511890"
   const val BANNER_TEST_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
 
   @Volatile private var initialized = false
