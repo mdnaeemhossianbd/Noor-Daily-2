@@ -51,6 +51,11 @@ enum class NoorTab {
 }
 
 class MainActivity : ComponentActivity() {
+  override fun onStart() {
+    super.onStart()
+    AdMobManager.showAppOpenIfAvailable(this)
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
