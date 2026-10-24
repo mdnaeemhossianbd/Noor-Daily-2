@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.data.SampleIslamicData
+import com.example.util.NativeAdvancedAdCard
 import com.example.model.CityLocation
 import com.example.model.IslamicPost
 import com.example.ui.components.CitySelectionDialog
@@ -1571,6 +1572,8 @@ fun HomeScreen(
         }
       }
     }
+
+    item(key = "native_ad_feed") { NativeAdvancedAdCard(modifier = Modifier.fillMaxWidth()) }
 
     items(allPosts.take(4)) { post ->
       Card(
