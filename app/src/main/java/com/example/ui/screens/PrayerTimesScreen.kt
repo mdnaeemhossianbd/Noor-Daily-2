@@ -804,11 +804,23 @@ fun PrayerTimesScreen(
       onSelectGps = {
         isUsingGps = true
         userLocationInfo = LocationAndNotificationHelper.getCurrentDeviceLocation(context)
+        context.getSharedPreferences("noor_daily_prefs", android.content.Context.MODE_PRIVATE).edit()
+          .putBoolean("use_gps_location", true)
+          .apply()
+        com.example.worker.PrayerWorkScheduler.enqueuePrayerReminders(context)
       },
       onSelectCity = { city ->
         isUsingGps = false
         currentSelectedCity = city
         onCitySelected(city)
+        context.getSharedPreferences("noor_daily_prefs", android.content.Context.MODE_PRIVATE).edit()
+          .putBoolean("use_gps_location", false)
+          .putString("selected_city_latitude", city.latitude.toString())
+          .putString("selected_city_longitude", city.longitude.toString())
+          .putString("selected_city_timezone", city.timeZoneId)
+          .putString("selected_city_name_en", city.nameEn)
+          .apply()
+        com.example.worker.PrayerWorkScheduler.enqueuePrayerReminders(context)
       },
       onDismiss = { showCityDialog = false }
     )

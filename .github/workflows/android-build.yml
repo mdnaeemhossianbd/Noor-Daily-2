@@ -4,14 +4,20 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - "mobile/**"
+      - "app/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
       - ".github/workflows/android-build.yml"
   push:
     branches:
       - main
       - "fix/**"
     paths:
-      - "mobile/**"
+      - "app/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
       - ".github/workflows/android-build.yml"
 
 jobs:
@@ -27,39 +33,35 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
         with:
-          channel: stable
-          cache: true
+          accept-android-sdk-licenses: true
 
-      # Keep google-services.json out of Git. Add its complete JSON contents
-      # as the repository Actions secret GOOGLE_SERVICES_JSON.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      # Inject google-services.json if passed via repository secret
       - name: Prepare Firebase Android configuration
         shell: bash
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          if [ ! -f mobile/android/app/google-services.json ]; then
-            if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-              echo "::error::Firebase config is missing. Add the contents of mobile/android/app/google-services.json as the repository Actions secret GOOGLE_SERVICES_JSON."
-              exit 1
+          if [ ! -f app/google-services.json ]; then
+            if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+              printf '%s' "$GOOGLE_SERVICES_JSON" > app/google-services.json
             fi
-            printf '%s' "$GOOGLE_SERVICES_JSON" > mobile/android/app/google-services.json
           fi
-          test -s mobile/android/app/google-services.json
-
-      - name: Install Flutter dependencies
-        working-directory: mobile
-        run: flutter pub get
 
       - name: Build debug APK
-        working-directory: mobile
-        run: flutter build apk --debug --no-pub
+        run: gradle :app:assembleDebug --stacktrace
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: noor-daily-debug-apk
-          path: mobile/build/app/outputs/flutter-apk/app-debug.apk
+          path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          retention-days: 14

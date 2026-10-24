@@ -14,6 +14,7 @@ class BootReceiver : BroadcastReceiver() {
       action == Intent.ACTION_TIMEZONE_CHANGED
     ) {
       PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+      com.example.worker.PrayerWorkScheduler.enqueuePrayerReminders(context)
     }
   }
 }

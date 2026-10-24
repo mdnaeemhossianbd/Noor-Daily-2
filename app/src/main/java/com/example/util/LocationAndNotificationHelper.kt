@@ -356,9 +356,11 @@ object LocationAndNotificationHelper {
     return 6371.0 * c
   }
 
-  private fun getAppLanguage(context: Context): String =
-    context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE)
-      .getString("app_language", Locale.getDefault().language) ?: Locale.getDefault().language
+  private fun getAppLanguage(context: Context): String {
+    val lang = context.getSharedPreferences("noor_daily_prefs", Context.MODE_PRIVATE)
+      .getString("app_language", "bn") ?: "bn"
+    return if (lang == "en") "en" else "bn"
+  }
 
   private fun geocodeLocation(context: Context, lat: Double, lon: Double, language: String): String {
     // Use the selected app language for native reverse-geocoding results.

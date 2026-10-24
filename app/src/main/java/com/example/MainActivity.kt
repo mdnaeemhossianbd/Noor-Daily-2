@@ -57,17 +57,20 @@ class MainActivity : ComponentActivity() {
     LocationAndNotificationHelper.initNotificationChannel(this)
     AdMobManager.initialize(this)
     com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(this)
+    com.example.worker.PrayerWorkScheduler.enqueuePrayerReminders(this)
 
     setContent {
       val context = LocalContext.current
       var currentThemeMode by remember { mutableStateOf(AppThemeMode.DARK_MIDNIGHT) } // Dark Mode Default
       val appPreferences = remember { context.getSharedPreferences("noor_daily_prefs", android.content.Context.MODE_PRIVATE) }
       var currentLang by remember {
-        mutableStateOf(appPreferences.getString("app_language", "bn") ?: "bn")
+        val saved = appPreferences.getString("app_language", "bn") ?: "bn"
+        mutableStateOf(if (saved == "ar") "bn" else saved)
       }
       fun updateLanguage(language: String) {
-        currentLang = language
-        appPreferences.edit().putString("app_language", language).apply()
+        val normalized = if (language == "en") "en" else "bn"
+        currentLang = normalized
+        appPreferences.edit().putString("app_language", normalized).apply()
       }
       var currentTab by remember { mutableStateOf(NoorTab.HOME) }
       var selectedCity by remember {
@@ -110,6 +113,7 @@ class MainActivity : ComponentActivity() {
                 .putInt("prayer_adjust_isha", adjustments["isha"] ?: 0)
                 .apply()
               com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+              com.example.worker.PrayerWorkScheduler.enqueuePrayerReminders(context)
             }
             delay(5000)
           }
@@ -119,7 +123,7 @@ class MainActivity : ComponentActivity() {
       var showSplash by remember { mutableStateOf(true) }
 
       NoorDailyTheme(themeMode = currentThemeMode) {
-        CompositionLocalProvider(LocalLayoutDirection provides if (currentLang == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr) {
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
         if (showSplash) {
           SplashScreen(onAnimationFinished = { showSplash = false })
         } else {
@@ -192,11 +196,6 @@ class MainActivity : ComponentActivity() {
                     label = "EN",
                     isSelected = currentLang == "en",
                     onClick = { updateLanguage("en") }
-                  )
-                  LanguageChip(
-                    label = "عربي",
-                    isSelected = currentLang == "ar",
-                    onClick = { updateLanguage("ar") }
                   )
                 }
               }

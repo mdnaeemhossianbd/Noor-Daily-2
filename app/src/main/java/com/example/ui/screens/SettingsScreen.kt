@@ -440,11 +440,70 @@ fun SettingsScreen(
                   prayerPrefs.edit().putBoolean("azan_notifications_enabled", it).apply()
                   if (it) {
                     com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+                    com.example.worker.PrayerWorkScheduler.enqueuePrayerReminders(context)
                   } else {
                     com.example.util.PrayerAlarmScheduler.cancelAlarms(context)
+                    com.example.worker.PrayerWorkScheduler.cancelAllPrayerReminders(context)
                   }
                 }
               )
+            }
+          )
+
+          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+          // WorkManager background service status and test reminder trigger
+          ListItem(
+            headlineContent = {
+              Text(
+                when (currentLang) {
+                  "bn" -> "WorkManager ব্যাকগ্রাউন্ড সার্ভিস"
+                  "ar" -> "خدمة WorkManager في الخلفية"
+                  else -> "WorkManager Background Service"
+                },
+                fontWeight = FontWeight.SemiBold
+              )
+            },
+            supportingContent = {
+              Text(
+                when (currentLang) {
+                  "bn" -> "GPS/অবস্থান অনুযায়ী স্বয়ংক্রিয় আযান রিমাইন্ডার ব্যাকগ্রাউন্ডে সক্রিয় থাকে"
+                  "ar" -> "يعمل في الخلفية لجدولة التنبيهات حسب الموقع الفعلي"
+                  else -> "Automatically calculates and triggers Azan reminders based on user location in background"
+                }
+              )
+            },
+            leadingContent = {
+              Icon(
+                Icons.Default.Schedule,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+              )
+            },
+            trailingContent = {
+              OutlinedButton(
+                onClick = {
+                  com.example.worker.PrayerWorkScheduler.triggerImmediateTestReminder(context)
+                  Toast.makeText(
+                    context,
+                    when (currentLang) {
+                      "ar" -> "تم تشغيل إشعار تجريبي عبر WorkManager"
+                      "en" -> "Test notification triggered via WorkManager"
+                      else -> "WorkManager দিয়ে টেস্ট আযান রিমাইন্ডার পাঠানো হয়েছে"
+                    },
+                    Toast.LENGTH_SHORT
+                  ).show()
+                },
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+              ) {
+                Text(
+                  when (currentLang) {
+                    "bn" -> "টেস্ট করুন"
+                    "ar" -> "تجربة"
+                    else -> "Test"
+                  },
+                  fontSize = 11.sp
+                )
+              }
             }
           )
 
@@ -485,6 +544,7 @@ fun SettingsScreen(
                     prayerPrefs.edit().putBoolean("azan_${prayer.first.lowercase()}_enabled", enabled).apply()
                     prayerEnabled = prayerEnabled.toMutableMap().apply { put(prayer.first, enabled) }
                     com.example.util.PrayerAlarmScheduler.scheduleNextPrayerAlarm(context)
+                    com.example.worker.PrayerWorkScheduler.enqueuePrayerReminders(context)
                   }
                 )
               }
@@ -550,20 +610,6 @@ fun SettingsScreen(
             modifier = Modifier
               .fillMaxWidth()
               .clickable { onLanguageSelected("en") }
-          )
-          HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-          ListItem(
-            headlineContent = { Text("العربية (Arabic)") },
-            supportingContent = { Text("اللغة العربية مع دعم المحاذاة") },
-            leadingContent = {
-              RadioButton(
-                selected = currentLang == "ar",
-                onClick = { onLanguageSelected("ar") }
-              )
-            },
-            modifier = Modifier
-              .fillMaxWidth()
-              .clickable { onLanguageSelected("ar") }
           )
         }
       }

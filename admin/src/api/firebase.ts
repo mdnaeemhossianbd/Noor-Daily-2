@@ -2,6 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
  apiKey: "AIzaSyA0L1PfFrDxgYLUROcZYTiY-P0IStGhF9g",
@@ -22,5 +23,8 @@ export const storage = getStorage(app);
 
 // Realtime Database instance pointing to asia-southeast1
 export const db = getDatabase(app);
+
+// Cloud Firestore instance
+export const firestore = getFirestore(app);
 
 export default app;
