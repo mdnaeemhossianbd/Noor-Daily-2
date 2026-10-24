@@ -237,7 +237,10 @@ class MainActivity : ComponentActivity() {
 
               NavigationBarItem(
                 selected = currentTab == NoorTab.CATEGORIES,
-                onClick = { currentTab = NoorTab.CATEGORIES },
+                onClick = {
+                  AdMobManager.showInterstitialIfEligible(this@MainActivity)
+                  currentTab = NoorTab.CATEGORIES
+                },
                 icon = {
                   Icon(
                     if (currentTab == NoorTab.CATEGORIES) Icons.Filled.Category else Icons.Outlined.Category,
