@@ -35,6 +35,7 @@ import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.IslamicEmeraldPrimary
 import com.example.ui.theme.NoorDailyTheme
 import com.example.util.AdMobManager
+import com.example.util.BannerAdView
 import com.example.util.LocationAndNotificationHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -207,7 +208,9 @@ class MainActivity : ComponentActivity() {
             }
           },
           bottomBar = {
-            NavigationBar(
+            Column {
+              BannerAdView(modifier = Modifier.fillMaxWidth())
+              NavigationBar(
               containerColor = MaterialTheme.colorScheme.surface,
               tonalElevation = 6.dp
             ) {
@@ -336,6 +339,7 @@ class MainActivity : ComponentActivity() {
                   )
                 }
               )
+              }
             }
           }
         ) { innerPadding ->
